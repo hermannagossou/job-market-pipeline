@@ -31,11 +31,11 @@ Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housle
 - Scraping Welcome to the Jungle
 
 ## Installation
-git clone [https://github.com/hermannagossou/job-market-pipeline.git](https://github.com/hermannagossou/job-market-pipeline.git)
-cd job-market-pipeline
-python -m venv .venv
-source .venv/bin/activate  # Windows : .venvScriptsactivate
-pip install -r requirements.txt
+- git clone [https://github.com/hermannagossou/job-market-pipeline.git](https://github.com/hermannagossou/job-market-pipeline.git)
+- cd job-market-pipeline
+- python -m venv .venv
+- source .venv/bin/activate  # Windows : .venvScriptsactivate
+- pip install -r requirements.txt
 
 ## Équipe
 
