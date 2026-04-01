@@ -1,0 +1,6 @@
+# Ingestion APIs
+requests==2.31.0
+pandas==2.1.4
+
+# Tests
+pytest==7.4.3
