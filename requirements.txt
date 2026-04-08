@@ -1,6 +1,12 @@
 # Ingestion APIs
-requests==2.31.0
-pandas==2.1.4
+requests==2.33.1
+pandas==3.0.2
 
 # Tests
-pytest==7.4.3
+pytest==9.0.2
+
+# Variables d'environnements
+python-dotenv==1.2.2
+
+#Google Cloud Storage
+google-cloud-storage==3.10.1
