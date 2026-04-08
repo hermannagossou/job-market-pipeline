@@ -6,7 +6,7 @@ Construit dans le cadre de la formation **Liora Data Engineer RNCP7** — DataSc
 
 ## Architecture
 
-Source Systems → Ingestion (Airflow) → Storage (GCS + BigQuery) → Transformation (dbt) → Serving (Streamlit + FastAPI)
+Source Systems → Ingestion (Airflow) → Storage (GCS + BigQuery) → Transformation (dbt) → Serving (Power BI ou Streamlit + FastAPI)
 
 Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housley (2022)
 
@@ -30,13 +30,18 @@ Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housle
 - API France Travail
 - Scraping Welcome to the Jungle
 
-## Installation
+## Setup à suivre pour utiliser le projet
+
 - git clone [https://github.com/hermannagossou/job-market-pipeline.git](https://github.com/hermannagossou/job-market-pipeline.git)
 - cd job-market-pipeline
-- python -m venv .venv
-- source .venv/bin/activate  # Windows : .venvScriptsactivate
+- python -m venv job-market-venv
+- source job-market-venv/bin/activate  
 - pip install -r requirements.txt
 
 ## Équipe
 
-Projet réalisé par une équipe de 3 Data Engineers en formation Liora RNCP7.
+Projet réalisé par une équipe de 3 Data Engineers :
+
+- Hermann AGOSSOU
+- Clémence FALLON
+- Maxime G.
