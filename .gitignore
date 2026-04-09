@@ -3,7 +3,6 @@
 *.env
 secrets/
 credentials.json
-job-market-de-492514-5753968978d9.json
 
 
 # Python

@@ -32,11 +32,26 @@ Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housle
 
 ## Setup à suivre pour utiliser le projet
 
-- git clone [https://github.com/hermannagossou/job-market-pipeline.git](https://github.com/hermannagossou/job-market-pipeline.git)
-- cd job-market-pipeline
-- python -m venv job-market-venv
-- source job-market-venv/bin/activate  
-- pip install -r requirements.txt
+### 1. Cloner le repo
+git clone https://github.com/hermannagossou/job-market-pipeline.git
+cd job-market-pipeline
+
+### 2. Créer et activer l'environnement virtuel
+python -m venv job-market-venv
+source job-market-venv/bin/activate  # Windows : job-market-venv\Scripts\activate
+
+### 3. Installer les dépendances
+pip install -r requirements.txt
+
+### 4. Configurer les variables d'environnement
+cp .env.example .env
+# Ouvrir .env et renseigner les valeurs (clés API, etc.)
+
+### 5. Configurer les credentials GCP
+cp credentials.example.json credentials.json
+# Remplacer le contenu de credentials.json par ton fichier de service account GCP
+
+> ⚠️ Ne jamais committer .env ni credentials.json — ces fichiers sont dans le .gitignore.
 
 ## Équipe
 
