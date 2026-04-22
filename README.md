@@ -6,7 +6,7 @@ Construit dans le cadre de la formation **Liora Data Engineer RNCP7** — DataSc
 
 ## Architecture
 
-Source Systems → Ingestion (Airflow) → Storage (GCS + BigQuery) → Transformation (dbt) → Serving (Streamlit + FastAPI)
+Source Systems → Ingestion (Airflow) → Storage (GCS + BigQuery) → Transformation (dbt) → Serving (Power BI ou Streamlit + FastAPI)
 
 Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housley (2022)
 
@@ -30,13 +30,33 @@ Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housle
 - API France Travail
 - Scraping Welcome to the Jungle
 
-## Installation
-- git clone [https://github.com/hermannagossou/job-market-pipeline.git](https://github.com/hermannagossou/job-market-pipeline.git)
-- cd job-market-pipeline
-- python -m venv .venv
-- source .venv/bin/activate  # Windows : .venvScriptsactivate
-- pip install -r requirements.txt
+## Setup à suivre pour utiliser le projet
+
+### 1. Cloner le repo
+git clone https://github.com/hermannagossou/job-market-pipeline.git
+cd job-market-pipeline
+
+### 2. Créer et activer l'environnement virtuel
+python -m venv job-market-venv
+source job-market-venv/bin/activate  # Windows : job-market-venv\Scripts\activate
+
+### 3. Installer les dépendances
+pip install -r requirements.txt
+
+### 4. Configurer les variables d'environnement
+cp .env.example .env
+# Ouvrir .env et renseigner les valeurs (clés API, etc.)
+
+### 5. Configurer les credentials GCP
+cp credentials.example.json credentials.json
+# Remplacer le contenu de credentials.json par ton fichier de service account GCP
+
+> ⚠️ Ne jamais committer .env ni credentials.json — ces fichiers sont dans le .gitignore.
 
 ## Équipe
 
-Projet réalisé par une équipe de 3 Data Engineers en formation Liora RNCP7.
+Projet réalisé par une équipe de 3 Data Engineers :
+
+- Hermann AGOSSOU
+- Clémence FALLON
+- Maxime G.

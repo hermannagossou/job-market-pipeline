@@ -3,7 +3,7 @@
 *.env
 secrets/
 credentials.json
-service_account.json
+
 
 # Python
 __pycache__/
@@ -37,3 +37,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Environnement virtuel
+job-market-venv/
