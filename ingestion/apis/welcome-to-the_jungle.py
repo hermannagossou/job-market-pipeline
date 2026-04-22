@@ -90,10 +90,13 @@ def upload_to_gcs(bucket_name, data):
     ndjson_content = "\n".join([json.dumps(clean_empty_objects(offre), ensure_ascii=False) for offre in data])
 
     # Uploader le ndJSON
-    blob.upload_from_string(
-        data = ndjson_content,
-        content_type="application/json"
-    )
+    if not data:
+        print("Aucune donnée à uploader")
+    else:
+        blob.upload_from_string(
+            data = ndjson_content,
+            content_type="application/json"
+        )
 
     print(f"{len(data)} offres uploadées vers gs://{bucket_name}/{blob_name}")
 
