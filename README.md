@@ -16,8 +16,8 @@ Cadre conceptuel : *Fundamentals of Data Engineering* — Joe Reis & Matt Housle
 
 | Étape | Dossiers | Statut |
 |---|---|---|
-| 1 — Ingestion APIs | `ingestion/apis/` | ✅ En cours |
-| 1 — Scraping | `ingestion/scraping/` | ⏳ À venir |
+| 1 — Ingestion APIs | `ingestion/apis/france_travail.py` | ✅ Validé |
+| 1 — Scraping | `ingestion/scraping/wttj.py` | ⏳ En cours |
 | 2 — Pipeline ETL | `dags/` `dbt/` | ⏳ À venir |
 | 3 — ML | `ml/` | ⏳ À venir |
 | 4 — API + Frontend | `api/` `streamlit/` | ⏳ À venir |
@@ -59,4 +59,4 @@ Projet réalisé par une équipe de 3 Data Engineers :
 
 - Hermann AGOSSOU
 - Clémence FALLON
-- Maxime G.
+- Maxime GENET
