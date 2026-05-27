@@ -104,8 +104,15 @@ def upload_to_gcs(bucket_name, data, target_date):
     blob = bucket.blob(blob_name)
 
     # Construire le ndJSON
+    algolia_internal_fields = {"_highlightResult", "_snippetResult", "_rankingInfo"}
     date_chargement = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    ndjson_content = "\n".join([json.dumps({**offre, "date_chargement": date_chargement}, ensure_ascii=False) for offre in data])
+    ndjson_content = "\n".join([
+        json.dumps(
+            {k: v for k, v in offre.items() if k not in algolia_internal_fields} | {"date_chargement": date_chargement},
+            ensure_ascii=False
+        )
+        for offre in data
+    ])
 
     # Uploader le ndJSON
     blob.upload_from_string(
