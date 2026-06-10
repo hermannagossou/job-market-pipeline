@@ -134,7 +134,13 @@ def upload_to_gcs(bucket_name, data, target_date):
 
     # Construire le ndJSON: une offre par ligne, dans indentation
     date_chargement = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    ndjson_content = "\n".join([json.dumps({**clean_empty_objects(offre), "date_chargement": date_chargement}, ensure_ascii=False) for offre in data])
+    ndjson_content = "\n".join([
+        json.dumps(
+            {"data": clean_empty_objects(offre), "date_chargement": date_chargement},
+            ensure_ascii=False
+        )
+        for offre in data
+    ])
 
     blob.upload_from_string(
         data = ndjson_content,
