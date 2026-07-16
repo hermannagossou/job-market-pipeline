@@ -1,0 +1,342 @@
+skill_name,category
+Python,Langages de programmation
+R,Langages de programmation
+Scala,Langages de programmation
+Java,Langages de programmation
+Bash,Langages de programmation
+Shell,Langages de programmation
+JavaScript,Langages de programmation
+TypeScript,Langages de programmation
+Go,Langages de programmation
+Julia,Langages de programmation
+MATLAB,Langages de programmation
+SAS,Langages de programmation
+Kotlin,Langages de programmation
+Groovy,Langages de programmation
+C++,Langages de programmation
+C#,Langages de programmation
+Rust,Langages de programmation
+VBA,Langages de programmation
+SQL,Bases de données & SQL
+PostgreSQL,Bases de données & SQL
+MySQL,Bases de données & SQL
+SQL Server,Bases de données & SQL
+SQLite,Bases de données & SQL
+Oracle Database,Bases de données & SQL
+BigQuery,Bases de données & SQL
+Snowflake,Bases de données & SQL
+Redshift,Bases de données & SQL
+Teradata,Bases de données & SQL
+Hive,Bases de données & SQL
+Impala,Bases de données & SQL
+Presto,Bases de données & SQL
+Trino,Bases de données & SQL
+DuckDB,Bases de données & SQL
+MongoDB,Bases de données & SQL
+Cassandra,Bases de données & SQL
+Redis,Bases de données & SQL
+Elasticsearch,Bases de données & SQL
+Neo4j,Bases de données & SQL
+MariaDB,Bases de données & SQL
+Greenplum,Bases de données & SQL
+Vertica,Bases de données & SQL
+ClickHouse,Bases de données & SQL
+Azure Synapse,Bases de données & SQL
+Databricks SQL,Bases de données & SQL
+CockroachDB,Bases de données & SQL
+Netezza,Bases de données & SQL
+HBase,Bases de données & SQL
+T-SQL,Bases de données & SQL
+PL/SQL,Bases de données & SQL
+Azure Data Explorer,Bases de données & SQL
+KQL,Bases de données & SQL
+NoSQL,Bases de données & SQL
+DWH,Bases de données & SQL
+Data Warehouse,Bases de données & SQL
+DB2,Bases de données & SQL
+Apache Druid,Bases de données & SQL
+OpenSearch,Bases de données & SQL
+Apache Airflow,Data Engineering & Orchestration
+Apache Spark,Data Engineering & Orchestration
+Apache Kafka,Data Engineering & Orchestration
+dbt,Data Engineering & Orchestration
+dbt Core,Data Engineering & Orchestration
+dbt Cloud,Data Engineering & Orchestration
+Apache Flink,Data Engineering & Orchestration
+Luigi,Data Engineering & Orchestration
+Dagster,Data Engineering & Orchestration
+Prefect,Data Engineering & Orchestration
+Apache NiFi,Data Engineering & Orchestration
+Talend,Data Engineering & Orchestration
+Talend Open Studio,Data Engineering & Orchestration
+Informatica,Data Engineering & Orchestration
+SSIS,Data Engineering & Orchestration
+Pentaho,Data Engineering & Orchestration
+Apache Beam,Data Engineering & Orchestration
+Fivetran,Data Engineering & Orchestration
+Stitch,Data Engineering & Orchestration
+Airbyte,Data Engineering & Orchestration
+Apache Sqoop,Data Engineering & Orchestration
+Apache Oozie,Data Engineering & Orchestration
+Mage,Data Engineering & Orchestration
+Kedro,Data Engineering & Orchestration
+AWS Glue,Data Engineering & Orchestration
+Google Cloud Dataflow,Data Engineering & Orchestration
+Azure Data Factory,Data Engineering & Orchestration
+Databricks,Data Engineering & Orchestration
+Spark Streaming,Data Engineering & Orchestration
+Apache Pulsar,Data Engineering & Orchestration
+RabbitMQ,Data Engineering & Orchestration
+dlt,Data Engineering & Orchestration
+Hadoop,Data Engineering & Orchestration
+Cloudera,Data Engineering & Orchestration
+YARN,Data Engineering & Orchestration
+ETL,Data Engineering & Orchestration
+ELT,Data Engineering & Orchestration
+Oracle Data Integrator,Data Engineering & Orchestration
+SAP Data Services,Data Engineering & Orchestration
+Stambia,Data Engineering & Orchestration
+Semarchy xDI,Data Engineering & Orchestration
+Control-M,Data Engineering & Orchestration
+Autosys,Data Engineering & Orchestration
+N8N,Data Engineering & Orchestration
+Power Automate,Data Engineering & Orchestration
+Microsoft Fabric,Data Engineering & Orchestration
+Cognite Data Fusion,Data Engineering & Orchestration
+Big Data,Data Engineering & Orchestration
+Azure Service Bus,Data Engineering & Orchestration
+ActiveMQ,Data Engineering & Orchestration
+Google Pub/Sub,Data Engineering & Orchestration
+AWS Kinesis,Data Engineering & Orchestration
+Azure Event Hubs,Data Engineering & Orchestration
+PySpark,Data Engineering & Orchestration
+ELK,Data Engineering & Orchestration
+Logstash,Data Engineering & Orchestration
+DataOps,Data Engineering & Orchestration
+Lakehouse,Data Engineering & Orchestration
+batch,Data Engineering & Orchestration
+streaming,Data Engineering & Orchestration
+pipelines,Data Engineering & Orchestration
+GCP,Cloud & Infrastructure
+AWS,Cloud & Infrastructure
+Azure,Cloud & Infrastructure
+Docker,Cloud & Infrastructure
+Kubernetes,Cloud & Infrastructure
+Terraform,Cloud & Infrastructure
+Ansible,Cloud & Infrastructure
+Google Cloud Storage,Cloud & Infrastructure
+Amazon S3,Cloud & Infrastructure
+Azure Data Lake,Cloud & Infrastructure
+Azure Blob Storage,Cloud & Infrastructure
+Google Cloud Composer,Cloud & Infrastructure
+AWS Lambda,Cloud & Infrastructure
+Google Cloud Functions,Cloud & Infrastructure
+Azure Functions,Cloud & Infrastructure
+Amazon EMR,Cloud & Infrastructure
+Google Cloud Dataproc,Cloud & Infrastructure
+Helm,Cloud & Infrastructure
+GitHub Actions,Cloud & Infrastructure
+GitLab CI,Cloud & Infrastructure
+Jenkins,Cloud & Infrastructure
+Azure DevOps,Cloud & Infrastructure
+CloudFormation,Cloud & Infrastructure
+Google Cloud Run,Cloud & Infrastructure
+REST API,Cloud & Infrastructure
+SOAP,Cloud & Infrastructure
+Git,Cloud & Infrastructure
+GitHub,Cloud & Infrastructure
+GitLab,Cloud & Infrastructure
+Bitbucket,Cloud & Infrastructure
+Maven,Cloud & Infrastructure
+CI/CD,Cloud & Infrastructure
+Linux,Cloud & Infrastructure
+Cloud,Cloud & Infrastructure
+Data Lake,Cloud & Infrastructure
+IBM Cloud,Cloud & Infrastructure
+Apache Knox,Cloud & Infrastructure
+FastAPI,Cloud & Infrastructure
+Flask,Cloud & Infrastructure
+Django,Cloud & Infrastructure
+Prometheus,Cloud & Infrastructure
+Datadog,Cloud & Infrastructure
+OpenShift,Cloud & Infrastructure
+Power BI,Business Intelligence & Visualisation
+Tableau,Business Intelligence & Visualisation
+Looker,Business Intelligence & Visualisation
+Looker Studio,Business Intelligence & Visualisation
+Grafana,Business Intelligence & Visualisation
+Kibana,Business Intelligence & Visualisation
+Metabase,Business Intelligence & Visualisation
+Apache Superset,Business Intelligence & Visualisation
+QlikView,Business Intelligence & Visualisation
+Qlik Sense,Business Intelligence & Visualisation
+MicroStrategy,Business Intelligence & Visualisation
+IBM Cognos,Business Intelligence & Visualisation
+SAP BusinessObjects,Business Intelligence & Visualisation
+SSRS,Business Intelligence & Visualisation
+SSAS,Business Intelligence & Visualisation
+Redash,Business Intelligence & Visualisation
+Sigma,Business Intelligence & Visualisation
+ThoughtSpot,Business Intelligence & Visualisation
+Excel,Business Intelligence & Visualisation
+Matplotlib,Business Intelligence & Visualisation
+Seaborn,Business Intelligence & Visualisation
+Plotly,Business Intelligence & Visualisation
+D3.js,Business Intelligence & Visualisation
+Dash,Business Intelligence & Visualisation
+Streamlit,Business Intelligence & Visualisation
+Shiny,Business Intelligence & Visualisation
+Crystal Reports,Business Intelligence & Visualisation
+MyReport,Business Intelligence & Visualisation
+IB Webfocus,Business Intelligence & Visualisation
+Power Platform,Business Intelligence & Visualisation
+ggplot2,Business Intelligence & Visualisation
+DAX,Business Intelligence & Visualisation
+datavisualisation,Business Intelligence & Visualisation
+Google Analytics 4,Business Intelligence & Visualisation
+Google Analytics,Business Intelligence & Visualisation
+Google Tag Manager,Business Intelligence & Visualisation
+Google Sheets,Business Intelligence & Visualisation
+Clarity,Business Intelligence & Visualisation
+Hotjar,Business Intelligence & Visualisation
+Contentsquare,Business Intelligence & Visualisation
+Power Query,Business Intelligence & Visualisation
+PowerApps,Business Intelligence & Visualisation
+BI-Query,Business Intelligence & Visualisation
+BI,Business Intelligence & Visualisation
+scikit-learn,Machine Learning & IA
+PyTorch,Machine Learning & IA
+TensorFlow,Machine Learning & IA
+Keras,Machine Learning & IA
+XGBoost,Machine Learning & IA
+LightGBM,Machine Learning & IA
+CatBoost,Machine Learning & IA
+MLflow,Machine Learning & IA
+Kubeflow,Machine Learning & IA
+Amazon SageMaker,Machine Learning & IA
+Vertex AI,Machine Learning & IA
+Azure Machine Learning,Machine Learning & IA
+H2O.ai,Machine Learning & IA
+Hugging Face,Machine Learning & IA
+LangChain,Machine Learning & IA
+LangGraph,Machine Learning & IA
+NLTK,Machine Learning & IA
+spaCy,Machine Learning & IA
+OpenCV,Machine Learning & IA
+Prophet,Machine Learning & IA
+Weights & Biases,Machine Learning & IA
+Optuna,Machine Learning & IA
+Feast,Machine Learning & IA
+RAPIDS,Machine Learning & IA
+Ray,Machine Learning & IA
+Pandas,Machine Learning & IA
+NumPy,Machine Learning & IA
+SciPy,Machine Learning & IA
+Statsmodels,Machine Learning & IA
+Polars,Machine Learning & IA
+Dask,Machine Learning & IA
+JupyterLab,Machine Learning & IA
+Transformers,Machine Learning & IA
+OpenAI API,Machine Learning & IA
+LlamaIndex,Machine Learning & IA
+Machine Learning,Machine Learning & IA
+deep learning,Machine Learning & IA
+NLP,Machine Learning & IA
+LLM,Machine Learning & IA
+RAG,Machine Learning & IA
+IA générative,Machine Learning & IA
+MLOps,Machine Learning & IA
+LLMOps,Machine Learning & IA
+ChatGPT,Machine Learning & IA
+Gemini,Machine Learning & IA
+GPT-4,Machine Learning & IA
+GenAI,Machine Learning & IA
+Mistral,Machine Learning & IA
+M365 Copilot,Machine Learning & IA
+text mining,Machine Learning & IA
+classification,Machine Learning & IA
+scoring,Machine Learning & IA
+segmentation,Machine Learning & IA
+churn,Machine Learning & IA
+LTV,Machine Learning & IA
+analyses comportementales,Machine Learning & IA
+apprentissage automatique,Machine Learning & IA
+analyse statistique,Machine Learning & IA
+analyses statistiques avancées,Machine Learning & IA
+modélisation statistique,Machine Learning & IA
+analyse des séries chronologiques,Machine Learning & IA
+Analyse de séries temporelles,Machine Learning & IA
+traitement de séries temporelles,Machine Learning & IA
+prévision,Machine Learning & IA
+statistiques,Machine Learning & IA
+Modélisation prédictive,Machine Learning & IA
+détection d'anomalies,Machine Learning & IA
+vision par ordinateur,Machine Learning & IA
+Traitement du signal,Machine Learning & IA
+Réseaux de neurones convolutifs,Machine Learning & IA
+Transformée par diffusion d'ondelettes,Machine Learning & IA
+Analyse de graphes,Machine Learning & IA
+GNN,Machine Learning & IA
+théorie des graphes,Machine Learning & IA
+Dataiku,Machine Learning & IA
+SAS Viya,Machine Learning & IA
+SPSS,Machine Learning & IA
+Parquet,Formats & Stockage
+Avro,Formats & Stockage
+ORC,Formats & Stockage
+Delta Lake,Formats & Stockage
+Apache Iceberg,Formats & Stockage
+Apache Hudi,Formats & Stockage
+Apache Arrow,Formats & Stockage
+HDFS,Formats & Stockage
+JSON,Formats & Stockage
+CSV,Formats & Stockage
+XML,Formats & Stockage
+YAML,Formats & Stockage
+Protobuf,Formats & Stockage
+HL7,Formats & Stockage
+FHIR,Formats & Stockage
+EDIFACT,Formats & Stockage
+X12,Formats & Stockage
+IDoc,Formats & Stockage
+Great Expectations,Gouvernance & Qualité des données
+DataHub,Gouvernance & Qualité des données
+Alation,Gouvernance & Qualité des données
+Collibra,Gouvernance & Qualité des données
+Apache Atlas,Gouvernance & Qualité des données
+Amundsen,Gouvernance & Qualité des données
+Monte Carlo,Gouvernance & Qualité des données
+Atlan,Gouvernance & Qualité des données
+Soda,Gouvernance & Qualité des données
+OpenMetadata,Gouvernance & Qualité des données
+Informatica Data Quality,Gouvernance & Qualité des données
+Talend Data Quality,Gouvernance & Qualité des données
+Apache Ranger,Gouvernance & Qualité des données
+Unity Catalog,Gouvernance & Qualité des données
+Microsoft Purview,Gouvernance & Qualité des données
+Semarchy,Gouvernance & Qualité des données
+data quality,Gouvernance & Qualité des données
+validation,Gouvernance & Qualité des données
+monitoring,Gouvernance & Qualité des données
+lineage,Gouvernance & Qualité des données
+data modeling,Gouvernance & Qualité des données
+modèle en étoile,Gouvernance & Qualité des données
+modèle relationnel,Gouvernance & Qualité des données
+Data Vault,Gouvernance & Qualité des données
+Data Catalog,Gouvernance & Qualité des données
+Data Mesh,Gouvernance & Qualité des données
+Data Product,Gouvernance & Qualité des données
+SAP,ERP & Outils métier
+SAP MM,ERP & Outils métier
+Oracle HCM,ERP & Outils métier
+Salesforce Commerce Cloud,ERP & Outils métier
+Magento,ERP & Outils métier
+LIMS,ERP & Outils métier
+AS400,ERP & Outils métier
+Infor,ERP & Outils métier
+DxCare,ERP & Outils métier
+CPage,ERP & Outils métier
+PMSI-Pilot,ERP & Outils métier
+Druides,ERP & Outils métier
+Horquartz,ERP & Outils métier
+HR Access,ERP & Outils métier
