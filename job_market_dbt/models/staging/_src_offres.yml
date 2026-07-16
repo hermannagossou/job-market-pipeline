@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: raw_offres
+    description: "{{ doc('src_raw_offres') }}"
+    database: job-market-de-492514
+    schema: prod
+    tables:
+      - name: raw_france_travail_offres
+        description: "{{ doc('src_raw_france_travail_offres') }}"
+        config:
+          loaded_at_field: date_chargement
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+        columns:
+          - name: data
+            description: "Payload JSON brut de l'offre tel que renvoyé par l'API France Travail, sans transformation"
+          - name: date_chargement
+            description: "Date de chargement en base, utilisée pour le contrôle de fraîcheur"
+
+      - name: raw_wttj_offres
+        description: "{{ doc('src_raw_wttj_offres') }}"
+        config:
+          loaded_at_field: date_chargement
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+        columns:
+          - name: data
+            description: "Payload JSON brut de l'offre tel que renvoyé par l'API WTTJ / Algolia, champs internes Algolia exclus"
+          - name: date_chargement
+            description: "Date de chargement en base, utilisée pour le contrôle de fraîcheur"
