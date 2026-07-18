@@ -25,7 +25,13 @@ france_travail_intermediate as (
             else 'autre'
         end as type_contrat,
         cast(null as string) as niveau_formation, -- pas de champ source exploité pour l'instant (voir formations JSON)
-        ft.niveau_experience,
+        case
+            when ft.niveau_experience like '%Débutant%' then 0
+            when regexp_contains(ft.niveau_experience, r'^\d+\s*Mois') then 0
+            when regexp_contains(ft.niveau_experience, r'^\d+\s*An\(s\)')
+                then safe_cast(regexp_extract(ft.niveau_experience, r'^(\d+)\s*An\(s\)') as int64)
+            else null
+        end as niveau_experience,
         geo.nom_ville as ville,
         geo.nom_departement as departement,
         geo.nom_region as region,

@@ -33,7 +33,7 @@ with wttj_intermediate as (
             when niveau_formation is null then 'non renseigné'
         end as niveau_formation,
 
-        cast(niveau_experience as string) as niveau_experience,
+        niveau_experience as niveau_experience,
 
         trim(json_value(offices, '$[0].city')) as ville,
         trim(json_value(offices, '$[0].district')) as departement,
