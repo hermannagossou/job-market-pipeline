@@ -1,6 +1,6 @@
 with source_brute as (
 
-    select * from {{ ref('stg_wttj_offres') }}
+    select * from `job-market-de-492514`.`dbt_maxime`.`stg_wttj_offres`
 
 ),
 

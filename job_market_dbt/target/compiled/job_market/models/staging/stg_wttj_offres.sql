@@ -6,7 +6,7 @@
 
 
 with source as (
-    select * from {{ source('raw_offres', 'raw_wttj_offres') }}
+    select * from `job-market-de-492514`.`prod`.`raw_wttj_offres`
 ),
 
 colonnes_utiles as (

@@ -1,4 +1,8 @@
--- Normalisation des offres brutes Welcome to the Jungle.
+
+
+  create or replace view `job-market-de-492514`.`dbt_maxime`.`stg_wttj_offres`
+  OPTIONS()
+  as -- Normalisation des offres brutes Welcome to the Jungle.
 -- Source  : table raw_wttj_offres 
 -- Sortie  : colonnes renommées, types castés, salaire extrait par regex depuis le libellé texte,
 --           code commune normalisé sur 5 caractères (zéro-padding pour les DOM-TOM).
@@ -6,7 +10,7 @@
 
 
 with source as (
-    select * from {{ source('raw_offres', 'raw_wttj_offres') }}
+    select * from `job-market-de-492514`.`prod`.`raw_wttj_offres`
 ),
 
 colonnes_utiles as (
@@ -49,4 +53,5 @@ colonnes_utiles as (
     from source
 )
 
-select * from colonnes_utiles
+select * from colonnes_utiles;
+
