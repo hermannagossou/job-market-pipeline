@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: stg_france_travail_offres
+    description: "{{ doc('stg_france_travail_offres') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire)"
+        data_tests:
+          - unique
+          - not_null
+      - name: intitule
+        description: "Intitulé du poste normalisé (trim + initcap)"
+      - name: type_contrat
+        description: "Type de contrat normalisé (ex : CDI, CDD, Stage, Freelance, etc...)"
+      - name: formations
+        description: "Tableau de structs décrivant les formations requises (conservé brut pour traitement aval)"
+      - name: niveau_experience
+        description: "Niveau d'expérience requis en clair (ex : Débutant accepté, 2 ans d'expérience)"
+      - name: langues
+        description: "Tableau de structs décrivant les langues requises (conservé brut pour traitement aval)"
+      - name: nom_entreprise
+        description: "Nom de l'entreprise normalisé (trim + initcap), peut être null"
+      - name: code_commune
+        description: "Code commune INSEE sur 5 caractères (zero-paddé pour les DOM-TOM)"
+      - name: ville
+        description: "Nom de la ville extrait par regex depuis lieuTravail.libelle"
+      - name: code_departement
+        description: "Code département extrait par regex depuis lieuTravail.libelle"
+      - name: salaire_min
+        description: "Salaire minimum annuel en euros, extrait par regex depuis le libellé texte brut"
+      - name: salaire_max
+        description: "Salaire maximum annuel en euros, extrait par regex depuis le libellé texte brut"
+      - name: salaire_periodicite
+        description: "Périodicité du salaire extraite du libellé (Annuel, Mensuel ou Horaire)"
+      - name: nom_secteur
+        description: "Secteur d'activité brut de l'offre (normalisé dans la couche intermediate)"
+      - name: date_publication
+        description: "Date de publication de l'offre (castée depuis dateCreation)"
+      - name: description
+        description: "Description complète du poste rédigée par le recruteur"
+      - name: nom_plateforme
+        description: "Plateforme source, toujours 'France Travail' pour ce modèle"
+      - name: nbre_postes
+        description: "Nombre de postes à pourvoir (casté en INT64)"
+
+  - name: stg_ville_dept_reg
+    description: "{{ doc('stg_ville_dept_reg') }}"
+    columns:
+      - name: code_commune
+        description: "Code commune INSEE (clé primaire de cette table de référence)"
+        data_tests:
+          - unique
+          - not_null
+      - name: code_departement
+        description: "Code département INSEE"
+      - name: code_region
+        description: "Code région INSEE"
+      - name: nom_ville
+        description: "Nom de la commune"
+      - name: nom_departement
+        description: "Nom du département"
+      - name: nom_region
+        description: "Nom de la région"

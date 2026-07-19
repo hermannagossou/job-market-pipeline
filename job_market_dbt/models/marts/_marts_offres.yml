@@ -1,0 +1,346 @@
+version: 2
+
+models:
+  - name: dim_entreprises
+    description: "Dimension entreprises : une ligne par nom d'entreprise ayant publié au moins une offre. Surrogate key sur nom_entreprise."
+    columns:
+      - name: id_entreprise
+        description: "Clé primaire — surrogate key générée sur nom_entreprise"
+        data_tests:
+          - unique
+          - not_null
+      - name: nom
+        description: "Nom de l'entreprise"
+        data_tests:
+          - not_null
+
+  - name: dim_contrats
+    description: "Dimension contrats : une ligne par type de contrat (CDI, CDD, Stage, Alternance, Freelance, Intérim, Non Renseigné). Surrogate key sur type_contrat."
+    columns:
+      - name: id_contrat
+        description: "Clé primaire — surrogate key générée sur type_contrat"
+        data_tests:
+          - unique
+          - not_null
+      - name: contrat
+        description: "Type de contrat normalisé"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Non Renseigné']
+
+  - name: dim_formations
+    description: "Dimension formations : une ligne par niveau de formation requis. Surrogate key sur niveau_formation."
+    columns:
+      - name: id_formation
+        description: "Clé primaire — surrogate key générée sur niveau_formation"
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau
+        description: "Niveau de formation requis"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Non Renseigné']
+
+  - name: dim_secteurs
+    description: "Dimension secteurs : une ligne par secteur d'activité classifié par Gemini. Surrogate key sur nom_secteur."
+    columns:
+      - name: id_secteur
+        description: "Clé primaire — surrogate key générée sur nom_secteur"
+        data_tests:
+          - unique
+          - not_null
+      - name: nom
+        description: "Nom du secteur d'activité"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Banque & Finance', 'Assurance', 'Télécommunications', 'Retail & E-Commerce', 'Industrie & Manufacturing', 'Santé & Pharmaceutique', 'Conseil & Esn', 'Média & Divertissement', 'Logistique & Transport', 'Énergie & Environnement', 'Immobilier & Construction', 'Éducation & Recherche', 'Administration Publique', 'Startup & Tech', 'Autre']
+
+  - name: dim_metiers
+    description: "Dimension métiers : une ligne par intitulé de poste data normalisé (13 métiers). Surrogate key sur nom_metier."
+    columns:
+      - name: id_metier
+        description: "Clé primaire — surrogate key générée sur nom_metier"
+        data_tests:
+          - unique
+          - not_null
+      - name: nom
+        description: "Intitulé du métier data normalisé"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Data Engineer', 'Data Analyst', 'Data Scientist', 'Machine Learning Engineer', 'Analytics Engineer', 'Data Architect', 'Business Intelligence Analyst', 'Data Product Manager', 'Chief Data Officer', 'Data Steward', 'Data Manager', 'Dataops Engineer', 'Mlops Engineer']
+
+  - name: dim_experiences
+    description: "Dimension expériences : une ligne par niveau d'expérience requis (4 classes). Surrogate key sur niveau_experience."
+    columns:
+      - name: id_experience
+        description: "Clé primaire — surrogate key générée sur niveau_experience"
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau
+        description: "Niveau d'expérience requis"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
+
+  - name: dim_localisations
+    description: "Dimension localisations : une ligne par combinaison unique ville / département / région. Surrogate key sur les trois colonnes combinées."
+    columns:
+      - name: id_localisation
+        description: "Clé primaire — surrogate key générée sur (ville, departement, region)"
+        data_tests:
+          - unique
+          - not_null
+      - name: ville
+        description: "Nom de la ville"
+        data_tests:
+          - not_null
+      - name: departement
+        description: "Nom du département"
+        data_tests:
+          - not_null
+      - name: region
+        description: "Nom de la région"
+        data_tests:
+          - not_null
+
+  - name: dim_dates
+    description: "{{ doc('dim_dates') }}"
+    columns:
+      - name: id_date
+        description: "Clé primaire — surrogate key générée sur date_publication"
+        data_tests:
+          - unique
+          - not_null
+      - name: date_publication
+        description: "Date de publication de l'offre"
+        data_tests:
+          - not_null
+      - name: annee
+        description: "Année de publication (ex : 2024)"
+        data_tests:
+          - not_null
+      - name: mois
+        description: "Mois de publication en numérique (1 à 12)"
+        data_tests:
+          - not_null
+      - name: trimestre
+        description: "Trimestre de publication (1 à 4)"
+        data_tests:
+          - not_null
+      - name: semaine
+        description: "Numéro de semaine ISO dans l'année"
+        data_tests:
+          - not_null
+      - name: jour_semaine
+        description: "Jour de la semaine en numérique (1 = dimanche, 7 = samedi, convention BigQuery)"
+        data_tests:
+          - not_null
+      - name: nom_mois
+        description: "Nom du mois en anglais (ex : January)"
+        data_tests:
+          - not_null
+      - name: nom_jour
+        description: "Nom du jour en anglais (ex : Monday)"
+        data_tests:
+          - not_null
+
+  - name: dim_competences
+    description: "{{ doc('dim_competences') }}"
+    columns:
+      - name: id_competence
+        description: "Clé primaire — surrogate key générée sur competence"
+        data_tests:
+          - unique
+          - not_null
+      - name: competence
+        description: "Nom de la compétence technique (ex : Python, dbt, Spark)"
+        data_tests:
+          - not_null
+      - name: categorie
+        description: "Catégorie de la compétence issue du seed (ex : Langages de programmation, Cloud & Infrastructure)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Langages de programmation', 'Bases de données & SQL', 'Data Engineering & Orchestration', 'Cloud & Infrastructure', 'Business Intelligence & Visualisation', 'Machine Learning & IA', 'Formats & Stockage', 'Gouvernance & Qualité des données', 'ERP & Outils métier']
+
+  - name: dim_langues
+    description: "Dimension langues : une ligne par langue demandée dans les offres. Surrogate key sur langue."
+    columns:
+      - name: id_langue
+        description: "Clé primaire — surrogate key générée sur langue"
+        data_tests:
+          - unique
+          - not_null
+      - name: langue
+        description: "Langue demandée dans l'offre, ou 'Non Renseigné'"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [
+                  'Anglais', 'Français', 'Espagnol', 'Allemand', 'Italien',
+                  'Portugais', 'Chinois', 'Mandarin', 'Japonais', 'Arabe',
+                  'Néerlandais', 'Hollandais', 'Russe', 'Coréen', 'Turc',
+                  'Polonais', 'Suédois', 'Danois', 'Norvégien', 'Finnois',
+                  'Hindi', 'Non Renseigné'
+                ]
+
+  - name: fact_offres
+    description: "{{ doc('fact_offres') }}"
+    columns:
+      - name: id_offre
+        description: "Clé primaire — surrogate key générée sur (id, nom_plateforme)"
+        data_tests:
+          - unique
+          - not_null
+      - name: id_metier
+        description: "Clé étrangère vers dim_metiers"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_metiers')
+                field: id_metier
+      - name: id_entreprise
+        description: "Clé étrangère vers dim_entreprises"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_entreprises')
+                field: id_entreprise
+      - name: id_contrat
+        description: "Clé étrangère vers dim_contrats"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_contrats')
+                field: id_contrat
+      - name: id_formation
+        description: "Clé étrangère vers dim_formations"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_formations')
+                field: id_formation
+      - name: id_experience
+        description: "Clé étrangère vers dim_experiences"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_experiences')
+                field: id_experience
+      - name: id_localisation
+        description: "Clé étrangère vers dim_localisations"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_localisations')
+                field: id_localisation
+      - name: id_secteur
+        description: "Clé étrangère vers dim_secteurs"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_secteurs')
+                field: id_secteur
+      - name: id_date
+        description: "Clé étrangère vers dim_dates"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_dates')
+                field: id_date
+      - name: nom_plateforme
+        description: "Plateforme source de l'offre (dénormalisée pour faciliter les analyses par source)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['France Travail', 'Welcome To The Jungle']
+      - name: salaire_min
+        description: "Salaire minimum annuel brut en euros"
+        data_tests:
+          - not_null
+      - name: salaire_max
+        description: "Salaire maximum annuel brut en euros"
+        data_tests:
+          - not_null
+      - name: statut_salaire
+        description: "Origine du salaire : Déclaré (fourni par le recruteur), Incomplet (partiel), Estimé (imputé par médiane)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Estimé', 'Déclaré', 'Incomplet']
+      - name: nbre_postes
+        description: "Nombre de postes à pourvoir pour cette offre"
+        data_tests:
+          - not_null
+
+  - name: bridge_offres_competences
+    description: "{{ doc('bridge_offres_competences') }}"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['id_offre', 'id_competence']
+    columns:
+      - name: id_offre
+        description: "Clé étrangère vers fact_offres"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fact_offres')
+                field: id_offre
+      - name: id_competence
+        description: "Clé étrangère vers dim_competences"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_competences')
+                field: id_competence
+
+  - name: bridge_offres_langues
+    description: "{{ doc('bridge_offres_langues') }}"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['id_offre', 'id_langue']
+    columns:
+      - name: id_offre
+        description: "Clé étrangère vers fact_offres"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fact_offres')
+                field: id_offre
+      - name: id_langue
+        description: "Clé étrangère vers dim_langues"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_langues')
+                field: id_langue
