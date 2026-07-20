@@ -40,3 +40,5 @@ Thumbs.db
 
 # Environnement virtuel
 job-market-venv/
+
+logs/
