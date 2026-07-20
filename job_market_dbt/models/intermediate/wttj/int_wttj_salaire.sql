@@ -45,6 +45,16 @@ localisation as (
 
 -- Étape 1 : conversion en base annuelle. Seuil 10 000 € pour distinguer mensuel/annuel
 -- mal typé, même règle que côté France Travail.
+--
+-- Correctif additionnel découvert en test réel (id 0b4a20f6...) : des offres
+-- taguées 'yearly' contiennent en fait des valeurs en K€ non multipliées (ex.
+-- "48-55" pour un salaire de 48000-55000€) ou des gratifications mensuelles de
+-- stage/alternance mal taguées 'yearly' (ex. "800-1200" pour 800-1200€/MOIS).
+-- Les deux populations ne se chevauchent pas dans l'échantillon observé (15-110
+-- pour le K€, 800-1500 pour le mensuel), d'où les seuils <=300 / <5000 ci-dessous.
+-- Seuils choisis sur un échantillon limité : à revalider si des cas hors de ces
+-- bornes apparaissent (ex. un vrai gros salaire K€ >300 ou une petite gratification
+-- <800€/mois qui se ferait happer par la mauvaise règle).
 salaire_normalise as (
     select
         id,
@@ -53,6 +63,8 @@ salaire_normalise as (
             when salaire_periodicite = 'daily' then salaire_min * 218
             when salaire_periodicite = 'monthly' and salaire_min <= 10000.0 then salaire_min * 12
             when salaire_periodicite = 'monthly' and salaire_min > 10000.0 then salaire_min
+            when salaire_periodicite = 'yearly' and salaire_min > 0.0 and salaire_min <= 300.0 then salaire_min * 1000
+            when salaire_periodicite = 'yearly' and salaire_min > 300.0 and salaire_min < 5000.0 then salaire_min * 12
             when salaire_min = 0.0 then null
             else salaire_min
         end as salaire_min,
@@ -61,6 +73,8 @@ salaire_normalise as (
             when salaire_periodicite = 'daily' then salaire_max * 218
             when salaire_periodicite = 'monthly' and salaire_max <= 10000.0 then salaire_max * 12
             when salaire_periodicite = 'monthly' and salaire_max > 10000.0 then salaire_max
+            when salaire_periodicite = 'yearly' and salaire_max > 0.0 and salaire_max <= 300.0 then salaire_max * 1000
+            when salaire_periodicite = 'yearly' and salaire_max > 300.0 and salaire_max < 5000.0 then salaire_max * 12
             when salaire_max = 0.0 then null
             else salaire_max
         end as salaire_max
