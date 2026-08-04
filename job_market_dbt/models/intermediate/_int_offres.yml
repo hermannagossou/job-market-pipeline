@@ -33,7 +33,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Non Renseigné']
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
       - name: niveau_experience
         description: "Niveau d'expérience requis"
         data_tests:

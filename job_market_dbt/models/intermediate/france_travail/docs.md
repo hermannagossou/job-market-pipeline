@@ -56,11 +56,46 @@ Classification du **secteur d'activité** parmi une liste stricte de 15 secteurs
 {% enddocs %}
 
 
-{% docs int_france_travail_type_contrat %}
-Classification du **type de contrat** en deux passes regex.
+{% docs int_france_travail_ai_type_contrat %}
+Classification du **type de contrat** via Gemini Flash (`prod.gemini_model`), depuis la
+`description` de l'offre.
 
-- **Passe 1** : détection dans la `description` (prioritaire sur le champ API, plus précis pour les alternances et stages).
-- **Passe 2** : normalisation du résultat combiné vers les valeurs canoniques : `CDI`, `CDD`, `Stage`, `Alternance`, `Freelance`, `Intérim`, ou `"Non Renseigné"`.
+- **Incrémental** (`unique_key = id`) : seules les nouvelles offres sont envoyées au LLM.
+- **Paramètres** : `temperature = 0.0` (déterministe), `max_output_tokens = 15`.
+- Le prompt demande explicitement de ne retenir que le contrat qui régit CE poste précis, en
+  ignorant les mentions non pertinentes ailleurs dans le texte (façon dont une expérience
+  passée a été acquise, sens non contractuel d'un mot comme "alternance" - rotation d'équipe -,
+  encadrement de personnes employées sous un autre type de contrat...).
+- Retourne l'une des 6 catégories, ou `"Non Renseigné"`.
+{% enddocs %}
+
+
+{% docs int_france_travail_type_contrat %}
+Classification du **type de contrat** requis.
+
+**Stratégie** (priorité décroissante) :
+1. Classification Gemini (`int_france_travail_ai_type_contrat`).
+2. Fallback sur la normalisation du champ API `type_contrat` (ex. `"CDD - 12 Mois"` → `CDD`,
+   `"Profession libérale"` → `Freelance`) si Gemini répond "Non Renseigné". Le champ API ne
+   peut de toute façon jamais exprimer "Alternance" ou "Stage" nativement (toujours replié en
+   "CDD - X Mois" dans les données observées), donc l'IA reste indispensable pour ces deux
+   catégories.
+
+Retourne l'une des 6 catégories, ou `"Non Renseigné"`.
+{% enddocs %}
+
+
+{% docs int_france_travail_ai_niveau_experience %}
+Extraction du **nombre d'années d'expérience exigées du candidat** via Gemini Flash
+(`prod.gemini_model`), depuis la `description` de l'offre.
+
+- **Incrémental** (`unique_key = id`) : seules les nouvelles offres sont envoyées au LLM.
+- **Paramètres** : `temperature = 0.0` (déterministe), `max_output_tokens = 20`.
+- Le prompt demande explicitement d'ignorer les mentions d'ancienneté de l'ENTREPRISE ou
+  de l'agence (ex. "Fort de 20 ans d'expérience, notre cabinet..."), qu'une regex ne peut
+  pas distinguer de manière fiable de l'exigence réellement posée au candidat.
+- Retourne un nombre entier brut (non plafonné), ou `"Non Renseigné"` si la description ne
+  précise aucune exigence chiffrée.
 {% enddocs %}
 
 
@@ -68,9 +103,10 @@ Classification du **type de contrat** en deux passes regex.
 Extraction et classification du **niveau d'expérience** requis.
 
 **Stratégie d'extraction** (priorité décroissante) :
-1. Regex `"X ans d'expérience"` depuis la `description` (plus précis que le champ API).
-2. Libellé API (`niveau_experience`) en fallback.
-Les valeurs > 15 ans sont écartées comme anomalies.
+1. Nombre d'années extrait par Gemini (`int_france_travail_ai_niveau_experience`), sans
+   plafond : le modèle distingue déjà l'exigence candidat de l'ancienneté d'entreprise.
+2. Libellé API (`niveau_experience`) en fallback si Gemini répond "Non Renseigné" ou une
+   valeur non numérique.
 
 **Mapping vers 4 classes** :
 - `Junior` : débutant accepté ou ≤ 2 ans
@@ -80,12 +116,32 @@ Les valeurs > 15 ans sont écartées comme anomalies.
 {% enddocs %}
 
 
-{% docs int_france_travail_niveau_formation %}
-Extraction et classification du **niveau de formation** requis (Bac+2 à Bac+5).
+{% docs int_france_travail_ai_niveau_formation %}
+Classification du **niveau de formation minimum requis** via Gemini Flash (`prod.gemini_model`),
+depuis la `description` de l'offre.
 
-**Stratégie** : extraction regex depuis le tableau `formations[]` (champ API) ET depuis la `description` (fallback).
-Le niveau le **plus élevé** trouvé est retenu via `MAX()` sur le rang numérique.
-Retourne `"Non Renseigné"` si aucun niveau n'est identifiable.
+- **Incrémental** (`unique_key = id`) : seules les nouvelles offres sont envoyées au LLM.
+- **Paramètres** : `temperature = 0.0` (déterministe), `max_output_tokens = 15`.
+- Le prompt fournit les équivalences usuelles (BTS/DUT → Bac+2, Licence/BUT/Bachelor → Bac+3,
+  Master 1 → Bac+4, Master/école d'ingénieur/grande école/MBA → Bac+5, doctorat/thèse/PhD →
+  Doctorat) et demande explicitement d'ignorer les mentions métier homonymes (ex. "Master Data
+  Management", "Scrum Master") qu'une regex par mots-clés ne peut pas distinguer de manière
+  fiable. Le Doctorat est traité comme un niveau à part, jamais confondu avec Bac+5.
+- Retourne l'un des 5 niveaux, ou `"Non Renseigné"`.
+{% enddocs %}
+
+
+{% docs int_france_travail_niveau_formation %}
+Extraction et classification du **niveau de formation** requis (Bac+2 à Bac+5, Doctorat).
+
+**Stratégie** (priorité décroissante) :
+1. Classification Gemini (`int_france_travail_ai_niveau_formation`).
+2. Fallback regex si Gemini répond "Non Renseigné", sur le champ API `formations[].niveauLibelle`
+   uniquement (le seul angle mort du modèle, qui ne lit que la `description`) : le Doctorat
+   est détecté séparément (mention explicite "doctorat"/"PhD") et prioritaire ; sinon le niveau
+   le **plus élevé** parmi Bac+2 à Bac+5 est retenu via `MAX()` sur le rang numérique.
+
+Retourne `"Non Renseigné"` si aucun niveau n'est identifiable par aucune des deux méthodes.
 {% enddocs %}
 
 
@@ -139,12 +195,29 @@ Extraction des **compétences techniques** via Gemini Flash à partir d'une list
 {% enddocs %}
 
 
+{% docs int_france_travail_ai_langues %}
+Extraction des **langues exigées du candidat** via Gemini Flash (`prod.gemini_model`), depuis
+la `description` de l'offre.
+
+- **Incrémental** (`unique_key = id`) : seules les nouvelles offres sont envoyées au LLM.
+- **Paramètres** : `temperature = 0.0` (déterministe), `max_output_tokens = 30` (plusieurs
+  langues possibles).
+- Le prompt demande explicitement d'ignorer les mentions de langue qui ne décrivent pas une
+  compétence attendue du candidat (nationalité de l'entreprise/des clients/du marché, ex.
+  "leader français de...") — la principale source de faux positifs de l'ancienne regex,
+  notamment sur "français".
+- Retourne une liste de langues séparées par une virgule (ex. `"Français, Anglais"`), ou
+  `"Non Renseigné"`.
+{% enddocs %}
+
+
 {% docs int_france_travail_offres_langues %}
 Extraction des **langues demandées** dans les offres France Travail.
 
-**Deux sources combinées** (priorité à l'API) :
-1. Champ API `langues[]` (tableau structuré) — libellé de la langue.
-2. Regex sur la `description` : capte les mentions implicites (`"anglais courant"`, `"maîtrise du français"`).
+**Deux sources combinées par union dédupliquée** (pas de priorité, une offre peut exiger
+plusieurs langues venant des deux sources) :
+1. Champ API `langues[]` (structuré, fiable mais peu renseigné : ~5% des offres).
+2. Extraction Gemini (`int_france_travail_ai_langues`) depuis la `description`.
 
-Valeurs possibles : `Français`, `Anglais`, `Non Renseigné`.
+Les deux sources sont validées contre la même liste de 21 langues de référence.
 {% enddocs %}

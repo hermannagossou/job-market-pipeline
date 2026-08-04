@@ -26,7 +26,7 @@ select
     ft.type_contrat,
     ft.formations,
     ft.niveau_experience,
-    coalesce(ft.code_commune, df.code_commune) as code_commune,
+    ft.code_commune as code_commune,
     coalesce(ft.code_departement, df.code_departement) as code_departement,
     ft.ville,
     df.nom_ville,

@@ -44,7 +44,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Non Renseigné']
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
 
   - name: dim_secteurs
     description: "Dimension secteurs : une ligne par secteur d'activité classifié par Gemini. Surrogate key sur nom_secteur."

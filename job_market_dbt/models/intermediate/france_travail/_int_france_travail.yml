@@ -90,6 +90,22 @@ models:
               arguments:
                 values: ['Banque & Finance', 'Assurance', 'Télécommunications', 'Retail & E-Commerce', 'Industrie & Manufacturing', 'Santé & Pharmaceutique', 'Conseil & Esn', 'Média & Divertissement', 'Logistique & Transport', 'Énergie & Environnement', 'Immobilier & Construction', 'Éducation & Recherche', 'Administration Publique', 'Startup & Tech', 'Autre']
 
+  - name: int_france_travail_ai_type_contrat
+    description: "{{ doc('int_france_travail_ai_type_contrat') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire)"
+        data_tests:
+          - unique
+          - not_null
+      - name: type_contrat_ia
+        description: "Type de contrat classifié par Gemini Flash : CDI, CDD, Stage, Alternance, Freelance, Intérim, ou 'Non Renseigné'"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Non Renseigné']
+
   - name: int_france_travail_type_contrat
     description: "{{ doc('int_france_travail_type_contrat') }}"
     columns:
@@ -99,12 +115,25 @@ models:
           - unique
           - not_null
       - name: type_contrat
-        description: "Type de contrat normalisé après les 2 passes regex"
+        description: "Type de contrat normalisé : priorité à Gemini, fallback sur le champ API normalisé"
         data_tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Non Renseigné']
+
+  - name: int_france_travail_ai_niveau_experience
+    description: "{{ doc('int_france_travail_ai_niveau_experience') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire)"
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau_experience_ia
+        description: "Nombre d'années d'expérience exigées du candidat, extrait par Gemini Flash depuis la description, ou 'Non Renseigné'"
+        data_tests:
+          - not_null
 
   - name: int_france_travail_niveau_experience
     description: "{{ doc('int_france_travail_niveau_experience') }}"
@@ -122,6 +151,22 @@ models:
               arguments:
                 values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
 
+  - name: int_france_travail_ai_niveau_formation
+    description: "{{ doc('int_france_travail_ai_niveau_formation') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire)"
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau_formation_ia
+        description: "Niveau de formation minimum classifié par Gemini Flash : Bac+2, Bac+3, Bac+4, Bac+5, Doctorat, ou 'Non Renseigné'"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
+
   - name: int_france_travail_niveau_formation
     description: "{{ doc('int_france_travail_niveau_formation') }}"
     columns:
@@ -131,12 +176,12 @@ models:
           - unique
           - not_null
       - name: niveau_formation
-        description: "Niveau de formation le plus élevé requis : Bac+2 à Bac+5, ou Non Renseigné"
+        description: "Niveau de formation le plus élevé requis : Bac+2 à Bac+5, Doctorat, ou Non Renseigné"
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Non Renseigné']
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
 
   - name: int_france_travail_salaire
     description: "{{ doc('int_france_travail_salaire') }}"
@@ -209,7 +254,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Non Renseigné']
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
       - name: niveau_experience
         description: "Niveau d'expérience classifié"
         data_tests:
@@ -289,6 +334,19 @@ models:
           - accepted_values:
               arguments:
                 values: ['France Travail', 'Welcome To The Jungle']
+
+  - name: int_france_travail_ai_langues
+    description: "{{ doc('int_france_travail_ai_langues') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire)"
+        data_tests:
+          - unique
+          - not_null
+      - name: langues_ia
+        description: "Langues exigées du candidat classifiées par Gemini Flash, séparées par une virgule (ex. 'Français, Anglais'), ou 'Non Renseigné'"
+        data_tests:
+          - not_null
 
   - name: int_france_travail_offres_langues
     description: "{{ doc('int_france_travail_offres_langues') }}"

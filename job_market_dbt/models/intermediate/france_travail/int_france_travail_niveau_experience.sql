@@ -1,40 +1,47 @@
 -- Extraction et classification du niveau d'expérience requis.
--- Source  : int_france_travail_offres_data (champs niveau_experience et description)
+-- Source  : int_france_travail_merge_ville (champ niveau_experience) + int_france_travail_ai_niveau_experience
+--           (nombre d'années extrait par Gemini depuis la description)
 -- Sortie  : une ligne par offre avec le niveau classifié : Junior / Confirmé / Senior / Expert.
 --
--- Stratégie : on extrait d'abord le nombre d'années depuis la description (regex "X ans d'expérience"),
--- prioritaire sur le libellé API (moins précis). On plafonne à 15 ans pour filtrer les anomalies.
--- Enfin on mappe vers les 4 classes métier.
+-- Stratégie : priorité au nombre d'années extrait par Gemini (comprend le contexte, ignore les
+-- mentions d'ancienneté de l'entreprise), fallback sur le libellé API si absent (Non Renseigné)
+-- ou non numérique. Enfin on mappe vers les 4 classes métier.
 
 with base as (
-    select id, niveau_experience, description
+    select id, niveau_experience
     from {{ ref('int_france_travail_merge_ville') }}
 
 ),
 
--- Extraction depuis l'API (libellé ou nombre d'années) et depuis la description (regex).
-experience_extraite as (
-    select
-        id,
-        case
-            when lower(niveau_experience) = "débutant accepté" then niveau_experience
-            when lower(niveau_experience) = "expérience exigée" then niveau_experience
-            else regexp_extract(lower(niveau_experience), r"\d{1,2}")
-        end as niveau_experience_api,
-        regexp_extract(
-            lower(description),
-            r"(\d{1,2})(?:\s*(?:à\s*\d{1,2})?\s*an\(?s\)?\s*(?:minimum)?\s*(?:d'expérience)?)"
-        ) as niveau_experience_extrait
-    from base
+ai_extraction as (
+    select id, niveau_experience_ia
+    from {{ ref('int_france_travail_ai_niveau_experience') }}
 ),
 
--- Priorité à la valeur extraite de la description si cohérente (≤ 15 ans), sinon on garde l'API.
+-- Combinaison de l'API (libellé ou nombre d'années) et de l'extraction Gemini.
+experience_extraite as (
+    select
+        base.id,
+        case
+            when lower(base.niveau_experience) like "%débutant accepté%" then "débutant accepté"
+            when lower(base.niveau_experience) like "%expérience exigée%" then "expérience exigée"
+            -- "12 Mois", "6 Mois"... : toujours < 1 an dans les données observées, donc Junior (0)
+            when lower(base.niveau_experience) like "%mois%" then "0"
+            else regexp_extract(lower(base.niveau_experience), r"\b(\d{1,2})\b")
+        end as niveau_experience_api,
+        ai_extraction.niveau_experience_ia as niveau_experience_extrait
+    from base
+    left join ai_extraction on base.id = ai_extraction.id
+),
+
+-- Priorité à l'extraction Gemini si elle a renvoyé un nombre exploitable (le modèle sait
+-- déjà écarter les mentions d'ancienneté d'entreprise, donc pas de plafond arbitraire ici) ;
+-- sinon (Non Renseigné) on retombe sur le libellé API.
 experience_combinee as (
     select
         id,
         case
-            when niveau_experience_extrait is not null
-                and safe_cast(niveau_experience_extrait as int64) <= 15
+            when safe_cast(niveau_experience_extrait as int64) is not null
                 then niveau_experience_extrait
             else niveau_experience_api
         end as niveau_experience_brut
