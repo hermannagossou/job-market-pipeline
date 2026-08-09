@@ -9,4 +9,20 @@ pytest==9.0.2
 python-dotenv==1.2.2
 
 #Google Cloud Storage
-google-cloud-storage==3.10.1
+google-cloud-storage==3.13.1
+
+# Google Cloud BigQuery
+google-cloud-bigquery==3.43.0
+
+# Google Cloud AI Platform
+google-cloud-aiplatform==1.163.0
+
+# Streamlit
+streamlit==1.61.1
+
+# PDFPlulmber
+pdfplumber==0.11.10
+
+
+
+
