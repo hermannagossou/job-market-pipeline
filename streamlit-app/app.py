@@ -535,7 +535,7 @@ if submitted:
         st.stop()
 
     id_client = str(uuid.uuid4())
-    date_soumission = datetime.now(timezone.utc).isoformat()
+    date_soumission = datetime.now(timezone.utc).date().isoformat()
     bq_client = get_bq_client()
 
     # --- Upload du CV vers GCS (si un CV a été analysé) ---
