@@ -37,7 +37,8 @@ select
     ft.date_publication,
     ft.description,
     ft.nom_plateforme,
-    ft.nbre_postes
+    ft.nbre_postes,
+    ft.lien_offre
 from int_france_travail_dedup as ft
 left join stg_ville_dept_reg as df
     on ft.code_commune = df.code_commune

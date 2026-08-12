@@ -18,6 +18,7 @@ colonnes_utiles as (
         trim(json_value(data, '$.experienceLibelle')) as niveau_experience,
         json_query(data, '$.langues') as langues,
         trim(json_value(data, '$.entreprise.nom')) as nom_entreprise,
+        trim(json_value(data, '$.origineOffre.urlOrigine')) as lien_offre,
         case
             when length(json_value(data, '$.lieuTravail.commune')) = 4
             then trim(
