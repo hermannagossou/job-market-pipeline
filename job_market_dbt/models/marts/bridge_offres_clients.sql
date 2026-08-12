@@ -12,8 +12,11 @@
 -- sur cette table (persistant).
 --
 -- Filtre dur sur 5 critères : formation, expérience, contrat (exigences
--- objectives de l'offre) + localisation, salaire (préférences client sans
--- ambiguïté possible). Exclut aussi les offres sans aucune compétence
+-- objectives de l'offre) + localisation (sans ambiguïté possible), salaire
+-- (chevauchement — l'offre est retenue dès que sa fourchette recoupe celle
+-- du client, même partiellement ; ancienne version en inclusion stricte,
+-- excluait à tort des offres avec un vrai recoupement, cf. diagnostic
+-- "Camille Dubois"). Exclut aussi les offres sans aucune compétence
 -- renseignée (score_exact/score_embedding y seraient à 0 par construction).
 --
 -- Le métier N'EST PAS un filtre dur (historique complet de la décision :
@@ -113,8 +116,8 @@ paires_eligibles as (
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
-       and oi.offre_salaire_min >= cp.client_salaire_min
-       and oi.offre_salaire_max <= cp.client_salaire_max
+       and oi.offre_salaire_min <= cp.client_salaire_max
+       and oi.offre_salaire_max >= cp.client_salaire_min
     where oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
       and cp.id_client in (select id_client from clients_a_traiter)
 
@@ -126,8 +129,8 @@ paires_eligibles as (
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
-       and oi.offre_salaire_min >= cp.client_salaire_min
-       and oi.offre_salaire_max <= cp.client_salaire_max
+       and oi.offre_salaire_min <= cp.client_salaire_max
+       and oi.offre_salaire_max >= cp.client_salaire_min
     where oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
       and oi.id_offre in (select id_offre from offres_a_traiter)
       and cp.id_client not in (select id_client from clients_a_traiter)
