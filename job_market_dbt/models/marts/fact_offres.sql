@@ -2,6 +2,8 @@
 -- Granularité : 1 offre × 1 plateforme (France Travail, WTTJ…)
 -- Clé : id_offre (surrogate key sur id + nom_plateforme)
 -- Toutes les dimensions sont reliées via leurs surrogate keys respectives.
+-- id_localisation utilise la MÊME normalisation de ville que dim_localisations.sql
+-- (via le macro normalize_ville) — indispensable pour que les clés correspondent.
 
 {{
     config(
@@ -11,7 +13,10 @@
 }}
 
 with int_offres as (
-    select * from {{ ref('int_offres') }}
+    select
+        *,
+        {{ normalize_ville('ville') }} as ville_normalisee
+    from {{ ref('int_offres') }}
 
     {% if is_incremental() %}
     where {{ dbt_utils.generate_surrogate_key(['id', 'nom_plateforme']) }}
@@ -27,7 +32,7 @@ fact as (
         {{ dbt_utils.generate_surrogate_key(['type_contrat']) }} as id_contrat,
         {{ dbt_utils.generate_surrogate_key(['niveau_formation']) }} as id_formation,
         {{ dbt_utils.generate_surrogate_key(['niveau_experience']) }} as id_experience,
-        {{ dbt_utils.generate_surrogate_key(['ville', 'departement', 'region']) }} as id_localisation,
+        {{ dbt_utils.generate_surrogate_key(['ville_normalisee', 'departement', 'region']) }} as id_localisation,
         {{ dbt_utils.generate_surrogate_key(['nom_secteur']) }} as id_secteur,
         {{ dbt_utils.generate_surrogate_key(['date_publication']) }} as id_date,
         nom_plateforme,
