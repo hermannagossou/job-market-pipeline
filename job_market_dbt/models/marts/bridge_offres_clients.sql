@@ -1,18 +1,6 @@
 -- ============================================================
 -- models/marts/bridge_offres_clients.sql
 -- ============================================================
--- Persiste les scores de matching (client x offre) pour tous les couples
--- éligibles. Gère le double flux : nouveaux clients (ou profils mis à jour)
--- x toutes les offres, ET clients existants x nouvelles offres.
---
--- Le pre_hook supprime d'abord les anciennes lignes des clients dont le
--- profil a changé depuis le dernier calcul — sans ça, un client qui change
--- de contrat/formation garderait des offres devenues inéligibles.
---
--- dim_clients et les 3 bridges côté client sont créées manuellement dans
--- BigQuery (alimentées par l'app Streamlit, pas par dbt) -> déclarées comme
--- sources (voir _sources_streamlit.yml), jamais via ref().
--- ============================================================
 {{ config(
     materialized='incremental',
     unique_key=['id_client', 'id_offre'],
@@ -35,9 +23,6 @@
 ) }}
 
 with clients_a_traiter as (
-    -- Clients jamais scorés, OU dont le profil a été mis à jour depuis le
-    -- dernier calcul (date_soumission plus récente que le dernier
-    -- date_calcul_matching connu pour ce client).
     select dc.id_client
     from {{ source('app_streamlit', 'dim_clients') }} dc
     {% if is_incremental() %}
@@ -82,7 +67,8 @@ offre_info as (
     join {{ ref('dim_experiences') }} de on de.id_experience = fo.id_experience
 ),
 
--- FILTRE DUR + double flux (nouveaux/mis-à-jour x tout, existants x nouvelles offres)
+-- FILTRE DUR SUR 6 CRITÈRES (formation/expérience/contrat = exigences offre ;
+-- métier/localisation/salaire = préférences client, désormais non-négociables)
 paires_eligibles as (
     select cp.id_client, oi.id_offre
     from client_profile cp
@@ -90,6 +76,10 @@ paires_eligibles as (
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
+       and oi.id_metier in (select id_metier from {{ source('app_streamlit', 'bridge_clients_metiers') }} where id_client = cp.id_client)
+       and oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
+       and oi.offre_salaire_max >= cp.client_salaire_min
+       and oi.offre_salaire_min <= cp.client_salaire_max
     where cp.id_client in (select id_client from clients_a_traiter)
 
     union distinct
@@ -100,11 +90,14 @@ paires_eligibles as (
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
+       and oi.id_metier in (select id_metier from {{ source('app_streamlit', 'bridge_clients_metiers') }} where id_client = cp.id_client)
+       and oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
+       and oi.offre_salaire_max >= cp.client_salaire_min
+       and oi.offre_salaire_min <= cp.client_salaire_max
     where oi.id_offre in (select id_offre from offres_a_traiter)
       and cp.id_client not in (select id_client from clients_a_traiter)
 ),
 
--- SCORE EXACT
 score_exact_calc as (
     select
         pe.id_client, pe.id_offre,
@@ -117,7 +110,6 @@ score_exact_calc as (
     group by pe.id_client, pe.id_offre
 ),
 
--- SCORE EMBEDDING
 clients_texte_competences as (
     select cc.id_client, string_agg(dc.competence, ', ') as content
     from {{ source('app_streamlit', 'bridge_clients_competences') }} cc
@@ -150,53 +142,18 @@ score_embedding_calc as (
             nullif(max(distance) over (partition by id_client) - min(distance) over (partition by id_client), 0)
         ) as score_embedding
     from score_embedding_raw
-),
-
--- SCORE PRÉFÉRENCES
-localisations_client as (
-    select id_client, array_agg(id_localisation) as localisations
-    from {{ source('app_streamlit', 'bridge_clients_localisations') }}
-    group by id_client
-),
-
-metiers_client as (
-    select id_client, array_agg(id_metier) as metiers
-    from {{ source('app_streamlit', 'bridge_clients_metiers') }}
-    group by id_client
-),
-
-score_preferences_calc as (
-    select
-        pe.id_client, pe.id_offre,
-        coalesce(
-            greatest(0,
-                least(cp.client_salaire_max, oi.offre_salaire_max)
-                - greatest(cp.client_salaire_min, oi.offre_salaire_min)
-            ) / nullif(cp.client_salaire_max - cp.client_salaire_min, 0)
-        , 0) as score_salaire,
-        case when oi.id_localisation in unnest(coalesce(lc.localisations, [])) then 1.0 else 0.0 end as score_localisation,
-        case when oi.id_metier in unnest(coalesce(mc.metiers, [])) then 1.0 else 0.3 end as score_metier
-    from paires_eligibles pe
-    join client_profile cp on cp.id_client = pe.id_client
-    join offre_info oi on oi.id_offre = pe.id_offre
-    left join localisations_client lc on lc.id_client = pe.id_client
-    left join metiers_client mc on mc.id_client = pe.id_client
 )
 
--- ASSEMBLAGE FINAL
 select
     pe.id_client,
     pe.id_offre,
     coalesce(sec.score_exact, 0) as score_exact,
     coalesce(sem.score_embedding, 0) as score_embedding,
-    round((spc.score_salaire + spc.score_localisation + spc.score_metier) / 3, 3) as score_preferences,
     round(
-        0.5 * coalesce(sec.score_exact, 0)
-        + 0.3 * coalesce(sem.score_embedding, 0)
-        + 0.2 * ((spc.score_salaire + spc.score_localisation + spc.score_metier) / 3)
+        0.625 * coalesce(sec.score_exact, 0)
+        + 0.375 * coalesce(sem.score_embedding, 0)
     , 3) as score_final,
     current_date() as date_calcul_matching
 from paires_eligibles pe
 left join score_exact_calc sec on sec.id_client = pe.id_client and sec.id_offre = pe.id_offre
 left join score_embedding_calc sem on sem.id_client = pe.id_client and sem.id_offre = pe.id_offre
-join score_preferences_calc spc on spc.id_client = pe.id_client and spc.id_offre = pe.id_offre
