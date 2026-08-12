@@ -500,21 +500,29 @@ def get_client_profile(id_client: str) -> dict | None:
 def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
     """Calcule les recommandations d'offres pour un client, en temps réel.
 
-    Filtre dur sur 6 critères : formation, expérience, contrat (exigences
-    objectives de l'offre) + métier, localisation, salaire (préférences du
-    client, désormais traitées comme non-négociables plutôt que pondérées —
-    décision prise après observation de résultats peu pertinents en pratique,
-    ex. une offre à Versailles remontée pour un client visant Toulouse).
+    Filtre dur sur 5 critères : formation, expérience, contrat (exigences
+    objectives de l'offre) + localisation, salaire (préférences client sans
+    ambiguïté possible — soit l'offre est dans la bonne ville, soit non).
 
-    Le chevauchement salaire est un chevauchement de plage (pas une égalité
-    stricte) : l'offre est éligible si sa fourchette recoupe au moins
-    partiellement celle du client, ni entièrement en dessous, ni entièrement
-    au-dessus.
+    Le métier N'EST PAS un filtre dur — historique de la décision : d'abord
+    filtre dur (trop restrictif, résultats quasi vides en pratique une fois
+    cumulé aux 5 autres filtres) ; puis score plat 1.0/0.3 (trop permissif,
+    laissait remonter des métiers très éloignés comme "Machine Learning
+    Engineer" pour un profil "Data Analyst"). Solution retenue : un score
+    gradué par similarité sémantique (embedding), qui capture la vraie
+    proximité entre métiers plutôt qu'un choix binaire — un métier proche
+    (Data Engineer) obtient un bon score, un métier éloigné (ML Engineer)
+    est naturellement pénalisé, sans exclure personne à tort.
 
-    score_final ne combine plus que les 2 scores de compétences (plus rien à
-    pondérer côté préférences, devenues des filtres) :
-        score_final = 0.625 × score_exact + 0.375 × score_embedding
-    (même ratio 5:3 qu'avant entre les deux, remis à l'échelle sur 100%).
+    Exclut aussi les offres sans aucune compétence renseignée dans
+    bridge_offres_competences (score_exact/score_embedding y seraient à 0
+    par construction, faussant le classement).
+
+    Le filtre salaire est une inclusion stricte : la fourchette de l'offre
+    doit être entièrement comprise dans celle du client.
+
+    score_final combine les 3 scores avec les poids d'origine du projet :
+        score_final = 0.5 × score_exact + 0.3 × score_embedding + 0.2 × score_metier
     """
     query = f"""
         WITH
@@ -542,16 +550,15 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             WHERE cp.client_rang_formation >= df.rang_formation
               AND cp.client_rang_experience >= de.rang_experience
               AND fo.id_contrat = cp.client_id_contrat
-              AND fo.id_metier IN (
-                  SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
-                  WHERE id_client = @id_client
-              )
               AND fo.id_localisation IN (
                   SELECT id_localisation FROM `{PROJECT_ID}.{DATASET}.bridge_clients_localisations`
                   WHERE id_client = @id_client
               )
-              AND fo.salaire_max >= cp.client_salaire_min
-              AND fo.salaire_min <= cp.client_salaire_max
+              AND fo.salaire_min >= cp.client_salaire_min
+              AND fo.salaire_max <= cp.client_salaire_max
+              AND fo.id_offre IN (
+                  SELECT DISTINCT id_offre FROM `{PROJECT_ID}.{DATASET}.bridge_offres_competences`
+              )
         ),
         competences_client AS (
             SELECT id_competence FROM `{PROJECT_ID}.{DATASET}.bridge_clients_competences`
@@ -595,6 +602,49 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
                     NULLIF(MAX(distance) OVER () - MIN(distance) OVER (), 0)
                 ) AS score_embedding
             FROM score_embedding_raw
+        ),
+        texte_metiers_client AS (
+            SELECT STRING_AGG(dm.nom, ', ') AS content
+            FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers` bcm
+            JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = bcm.id_metier
+            WHERE bcm.id_client = @id_client
+        ),
+        metiers_client_ids AS (
+            SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
+            WHERE id_client = @id_client
+        ),
+        score_metier_raw AS (
+            SELECT base.id_metier, distance
+            FROM VECTOR_SEARCH(
+                TABLE `{PROJECT_ID}.{DATASET}.dim_metiers_embeddings`,
+                'ml_generate_embedding_result',
+                (
+                    SELECT ml_generate_embedding_result
+                    FROM ML.GENERATE_EMBEDDING(
+                        MODEL `{PROJECT_ID}.{DATASET}.embedding_model`,
+                        (SELECT content FROM texte_metiers_client)
+                    )
+                ),
+                top_k => 1000
+            )
+        ),
+        score_metier_calc AS (
+            -- Match exact avec un des métiers choisis -> 1.0, garanti.
+            -- Sinon, similarité sémantique graduée (pas une pénalité plate) :
+            -- un métier proche (ex. Data Engineer) obtient un score correct,
+            -- un métier vraiment éloigné (ex. Machine Learning Engineer) est
+            -- naturellement pénalisé par sa distance, sans qu'on ait besoin
+            -- de le décider à la main.
+            SELECT
+                id_metier,
+                CASE
+                    WHEN id_metier IN (SELECT id_metier FROM metiers_client_ids) THEN 1.0
+                    ELSE SAFE_DIVIDE(
+                        MAX(distance) OVER () - distance,
+                        NULLIF(MAX(distance) OVER () - MIN(distance) OVER (), 0)
+                    )
+                END AS score_metier
+            FROM score_metier_raw
         )
         SELECT
             oe.id_offre,
@@ -605,13 +655,16 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             oe.offre_salaire_max,
             COALESCE(sec.score_exact, 0) AS score_exact,
             COALESCE(sem.score_embedding, 0) AS score_embedding,
+            COALESCE(smc.score_metier, 0) AS score_metier,
             ROUND(
-                0.625 * COALESCE(sec.score_exact, 0)
-                + 0.375 * COALESCE(sem.score_embedding, 0)
+                0.5 * COALESCE(sec.score_exact, 0)
+                + 0.3 * COALESCE(sem.score_embedding, 0)
+                + 0.2 * COALESCE(smc.score_metier, 0)
             , 3) AS score_final
         FROM offres_eligibles oe
         LEFT JOIN score_exact_calc sec ON sec.id_offre = oe.id_offre
         LEFT JOIN score_embedding_calc sem ON sem.id_offre = oe.id_offre
+        LEFT JOIN score_metier_calc smc ON smc.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_entreprises` dent ON dent.id_entreprise = oe.id_entreprise
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_localisations` dl ON dl.id_localisation = oe.id_localisation
