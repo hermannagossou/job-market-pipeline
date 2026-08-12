@@ -518,8 +518,14 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
     bridge_offres_competences (score_exact/score_embedding y seraient à 0
     par construction, faussant le classement).
 
-    Le filtre salaire est une inclusion stricte : la fourchette de l'offre
-    doit être entièrement comprise dans celle du client.
+    Le filtre salaire est un chevauchement (overlap), pas une inclusion
+    stricte : l'offre est retenue dès que sa fourchette recoupe celle du
+    client, même partiellement (ex. offre 24-36k acceptée pour un client
+    30-60k). Avant, `salaire_min >= client_min AND salaire_max <= client_max`
+    excluait à tort des offres qui chevauchaient réellement le budget
+    (diagnostiqué sur le profil test "Camille Dubois" : 4 offres Data
+    Engineer à 24-36k perdues sur un budget 30-60k, malgré 6k€ de
+    recoupement réel).
 
     score_final combine les 3 scores avec les poids d'origine du projet :
         score_final = 0.5 × score_exact + 0.3 × score_embedding + 0.2 × score_metier
@@ -555,8 +561,8 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
                   SELECT id_localisation FROM `{PROJECT_ID}.{DATASET}.bridge_clients_localisations`
                   WHERE id_client = @id_client
               )
-              AND fo.salaire_min >= cp.client_salaire_min
-              AND fo.salaire_max <= cp.client_salaire_max
+              AND fo.salaire_min <= cp.client_salaire_max
+              AND fo.salaire_max >= cp.client_salaire_min
               AND fo.id_offre IN (
                   SELECT DISTINCT id_offre FROM `{PROJECT_ID}.{DATASET}.bridge_offres_competences`
               )
