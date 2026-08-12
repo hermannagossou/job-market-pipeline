@@ -542,7 +542,8 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
         offres_eligibles AS (
             SELECT
                 fo.id_offre, fo.id_metier, fo.id_entreprise, fo.id_localisation,
-                fo.salaire_min AS offre_salaire_min, fo.salaire_max AS offre_salaire_max
+                fo.salaire_min AS offre_salaire_min, fo.salaire_max AS offre_salaire_max,
+                fo.lien_offre
             FROM `{PROJECT_ID}.{DATASET}.fact_offres` fo
             JOIN `{PROJECT_ID}.{DATASET}.dim_formations` df ON df.id_formation = fo.id_formation
             JOIN `{PROJECT_ID}.{DATASET}.dim_experiences` de ON de.id_experience = fo.id_experience
@@ -653,6 +654,7 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             dl.ville AS ville,
             oe.offre_salaire_min,
             oe.offre_salaire_max,
+            oe.lien_offre,
             COALESCE(sec.score_exact, 0) AS score_exact,
             COALESCE(sem.score_embedding, 0) AS score_embedding,
             COALESCE(smc.score_metier, 0) AS score_metier,

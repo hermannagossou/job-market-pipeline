@@ -89,6 +89,8 @@ else:
                     f"📍 {offre['ville'] or 'Ville non renseignée'} · "
                     f"💰 {offre['offre_salaire_min']:.0f}€ - {offre['offre_salaire_max']:.0f}€"
                 )
+                if offre.get("lien_offre"):
+                    st.link_button("🔗 Voir l'offre", offre["lien_offre"])
             with col_b:
                 st.metric("Score", f"{offre['score_final']*100:.0f}%")
 
