@@ -1,6 +1,37 @@
 -- ============================================================
 -- models/marts/bridge_offres_clients.sql
 -- ============================================================
+-- Persiste les scores de matching (client x offre) pour tous les couples
+-- éligibles. Gère le double flux : nouveaux clients (ou profils mis à jour)
+-- x toutes les offres, ET clients existants x nouvelles offres.
+--
+-- IMPORTANT : cette version est synchronisée avec get_recommendations()
+-- dans shared.py (calcul en direct côté Streamlit) — les deux DOIVENT
+-- rester alignées, sinon un client verrait des scores différents selon
+-- qu'il consulte "Mes recommandations" (direct) ou un futur dashboard basé
+-- sur cette table (persistant).
+--
+-- Filtre dur sur 5 critères : formation, expérience, contrat (exigences
+-- objectives de l'offre) + localisation, salaire (préférences client sans
+-- ambiguïté possible). Exclut aussi les offres sans aucune compétence
+-- renseignée (score_exact/score_embedding y seraient à 0 par construction).
+--
+-- Le métier N'EST PAS un filtre dur (historique complet de la décision :
+-- filtre dur trop restrictif -> score plat 1.0/0.3 trop permissif -> score
+-- gradué par embedding, retenu) — un métier proche (Data Engineer) obtient
+-- un bon score, un métier éloigné (Machine Learning Engineer) est
+-- naturellement pénalisé par sa distance sémantique, sans exclusion à tort.
+-- Contrairement aux compétences, ce score dépend du COUPLE (client, offre)
+-- et pas seulement de l'offre : deux clients différents peuvent avoir une
+-- similarité différente avec le même métier d'offre, selon leurs propres
+-- métiers choisis.
+--
+-- score_final = 0.5 × score_exact + 0.3 × score_embedding + 0.2 × score_metier
+--
+-- dim_clients et les 3 bridges côté client sont créées manuellement dans
+-- BigQuery (alimentées par l'app Streamlit, pas par dbt) -> déclarées comme
+-- sources (voir _sources_streamlit.yml), jamais via ref().
+-- ============================================================
 {{ config(
     materialized='incremental',
     unique_key=['id_client', 'id_offre'],
@@ -23,6 +54,9 @@
 ) }}
 
 with clients_a_traiter as (
+    -- Clients jamais scorés, OU dont le profil a été mis à jour depuis le
+    -- dernier calcul (date_soumission plus récente que le dernier
+    -- date_calcul_matching connu pour ce client).
     select dc.id_client
     from {{ source('app_streamlit', 'dim_clients') }} dc
     {% if is_incremental() %}
@@ -57,6 +91,9 @@ client_profile as (
 ),
 
 offre_info as (
+    -- Filtre en amont les offres sans aucune compétence renseignée : sans
+    -- ce filtre, score_exact et score_embedding tomberaient tous les deux à
+    -- 0 pour ces offres, faussant le classement.
     select
         fo.id_offre, fo.id_metier, fo.id_localisation, fo.id_contrat as offre_id_contrat,
         fo.salaire_min as offre_salaire_min, fo.salaire_max as offre_salaire_max,
@@ -65,39 +102,38 @@ offre_info as (
     from {{ ref('fact_offres') }} fo
     join {{ ref('dim_formations') }} df on df.id_formation = fo.id_formation
     join {{ ref('dim_experiences') }} de on de.id_experience = fo.id_experience
+    where fo.id_offre in (select distinct id_offre from {{ ref('bridge_offres_competences') }})
 ),
 
--- FILTRE DUR SUR 6 CRITÈRES (formation/expérience/contrat = exigences offre ;
--- métier/localisation/salaire = préférences client, désormais non-négociables)
+-- FILTRE DUR (5 critères, métier exclu volontairement) + double flux
 paires_eligibles as (
-    select cp.id_client, oi.id_offre
+    select cp.id_client, oi.id_offre, oi.id_metier
     from client_profile cp
     join offre_info oi
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
-       and oi.id_metier in (select id_metier from {{ source('app_streamlit', 'bridge_clients_metiers') }} where id_client = cp.id_client)
-       and oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
-       and oi.offre_salaire_max >= cp.client_salaire_min
-       and oi.offre_salaire_min <= cp.client_salaire_max
-    where cp.id_client in (select id_client from clients_a_traiter)
+       and oi.offre_salaire_min >= cp.client_salaire_min
+       and oi.offre_salaire_max <= cp.client_salaire_max
+    where oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
+      and cp.id_client in (select id_client from clients_a_traiter)
 
     union distinct
 
-    select cp.id_client, oi.id_offre
+    select cp.id_client, oi.id_offre, oi.id_metier
     from client_profile cp
     join offre_info oi
         on cp.client_rang_formation >= oi.offre_rang_formation
        and cp.client_rang_experience >= oi.offre_rang_experience
        and cp.client_id_contrat = oi.offre_id_contrat
-       and oi.id_metier in (select id_metier from {{ source('app_streamlit', 'bridge_clients_metiers') }} where id_client = cp.id_client)
-       and oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
-       and oi.offre_salaire_max >= cp.client_salaire_min
-       and oi.offre_salaire_min <= cp.client_salaire_max
-    where oi.id_offre in (select id_offre from offres_a_traiter)
+       and oi.offre_salaire_min >= cp.client_salaire_min
+       and oi.offre_salaire_max <= cp.client_salaire_max
+    where oi.id_localisation in (select id_localisation from {{ source('app_streamlit', 'bridge_clients_localisations') }} where id_client = cp.id_client)
+      and oi.id_offre in (select id_offre from offres_a_traiter)
       and cp.id_client not in (select id_client from clients_a_traiter)
 ),
 
+-- SCORE EXACT
 score_exact_calc as (
     select
         pe.id_client, pe.id_offre,
@@ -110,11 +146,12 @@ score_exact_calc as (
     group by pe.id_client, pe.id_offre
 ),
 
+-- SCORE EMBEDDING (compétences)
 clients_texte_competences as (
     select cc.id_client, string_agg(dc.competence, ', ') as content
     from {{ source('app_streamlit', 'bridge_clients_competences') }} cc
     join {{ ref('dim_competences') }} dc on dc.id_competence = cc.id_competence
-    where cc.id_client in (select id_client from paires_eligibles)
+    where cc.id_client in (select distinct id_client from paires_eligibles)
     group by cc.id_client
 ),
 
@@ -142,18 +179,64 @@ score_embedding_calc as (
             nullif(max(distance) over (partition by id_client) - min(distance) over (partition by id_client), 0)
         ) as score_embedding
     from score_embedding_raw
+),
+
+-- SCORE MÉTIER (gradué par embedding, dépend du couple client x offre)
+clients_texte_metiers as (
+    select bcm.id_client, string_agg(dm.nom, ', ') as content
+    from {{ source('app_streamlit', 'bridge_clients_metiers') }} bcm
+    join {{ ref('dim_metiers') }} dm on dm.id_metier = bcm.id_metier
+    where bcm.id_client in (select distinct id_client from paires_eligibles)
+    group by bcm.id_client
+),
+
+score_metier_raw as (
+    select query.id_client, base.id_metier, distance
+    from VECTOR_SEARCH(
+        table {{ ref('dim_metiers_embeddings') }}, 'ml_generate_embedding_result',
+        (
+            select ml_generate_embedding_result, id_client
+            from ML.GENERATE_EMBEDDING(
+                MODEL `{{ this.database }}.{{ this.schema }}.embedding_model`,
+                (select id_client, content from clients_texte_metiers)
+            )
+        ),
+        top_k => 1000  -- couvre l'ensemble du référentiel métiers (petit volume)
+    )
+),
+
+score_metier_calc as (
+    -- Match exact avec un des métiers choisis par CE client -> 1.0, garanti.
+    -- Sinon, similarité sémantique graduée, normalisée par client.
+    select
+        smr.id_client,
+        smr.id_metier,
+        case
+            when bcm2.id_metier is not null then 1.0
+            else safe_divide(
+                max(smr.distance) over (partition by smr.id_client) - smr.distance,
+                nullif(max(smr.distance) over (partition by smr.id_client) - min(smr.distance) over (partition by smr.id_client), 0)
+            )
+        end as score_metier
+    from score_metier_raw smr
+    left join {{ source('app_streamlit', 'bridge_clients_metiers') }} bcm2
+        on bcm2.id_client = smr.id_client and bcm2.id_metier = smr.id_metier
 )
 
+-- ASSEMBLAGE FINAL
 select
     pe.id_client,
     pe.id_offre,
     coalesce(sec.score_exact, 0) as score_exact,
     coalesce(sem.score_embedding, 0) as score_embedding,
+    coalesce(smc.score_metier, 0) as score_metier,
     round(
-        0.625 * coalesce(sec.score_exact, 0)
-        + 0.375 * coalesce(sem.score_embedding, 0)
+        0.5 * coalesce(sec.score_exact, 0)
+        + 0.3 * coalesce(sem.score_embedding, 0)
+        + 0.2 * coalesce(smc.score_metier, 0)
     , 3) as score_final,
     current_date() as date_calcul_matching
 from paires_eligibles pe
 left join score_exact_calc sec on sec.id_client = pe.id_client and sec.id_offre = pe.id_offre
 left join score_embedding_calc sem on sem.id_client = pe.id_client and sem.id_offre = pe.id_offre
+left join score_metier_calc smc on smc.id_client = pe.id_client and smc.id_metier = pe.id_metier
