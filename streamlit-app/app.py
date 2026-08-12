@@ -15,7 +15,9 @@ import streamlit as st
 from shared import (
     extract_cv_info,
     extract_text_from_pdf,
+    find_client_by_email,
     get_bq_client,
+    get_client_profile,
     get_gcs_client,
     load_dimension,
     resolve_competences_via_embedding,
@@ -50,10 +52,41 @@ except Exception as e:
 if "cv_analysis" not in st.session_state:
     st.session_state.cv_analysis = None
 
+# =============================================================================
+# DÉJÀ INSCRIT ? — retrouver ses recommandations sans ressaisir son profil
+# =============================================================================
+with st.container(border=True):
+    st.markdown("**🔑 Déjà inscrit ?**")
+    st.caption(
+        "Retrouve tes recommandations sans repasser par le formulaire. "
+        "⚠️ Simple recherche par email, pas un vrai compte sécurisé — "
+        "n'importe qui connaissant ton email pourrait accéder à ce que tu as renseigné."
+    )
+    col_email, col_btn = st.columns([3, 1])
+    with col_email:
+        email_lookup = st.text_input("Ton email", key="email_lookup", label_visibility="collapsed", placeholder="ton.email@exemple.com")
+    with col_btn:
+        lookup_clicked = st.button("Me connecter", use_container_width=True)
+
+    if lookup_clicked:
+        if not email_lookup.strip():
+            st.error("Entre ton email d'abord.")
+        else:
+            try:
+                found_id_client = find_client_by_email(email_lookup.strip())
+            except Exception as e:
+                found_id_client = None
+                st.error(f"Recherche indisponible pour l'instant ({e}).")
+            if found_id_client:
+                st.session_state["last_client_id"] = found_id_client
+                st.switch_page("pages/1_Recommandations.py")
+            else:
+                st.warning("Aucun profil trouvé avec cet email — remplis le formulaire ci-dessous pour t'inscrire.")
+
 st.divider()
 
 # =============================================================================
-# ÉTAPE 1 — Upload + analyse du CV
+# NOUVEAU PROFIL — formulaire + CV
 # =============================================================================
 st.subheader("1️⃣ Ton CV")
 cv_file = st.file_uploader("Format PDF uniquement", type=["pdf"])
@@ -112,10 +145,21 @@ if cv_file is not None and st.button("🔍 Analyser mon CV", type="primary"):
             st.rerun()
 
 analysis = st.session_state.cv_analysis
-suggested_competence_ids: list[int] = []
-suggested_metier_ids: list[int] = []
+profile_prefill = st.session_state.get("profile_prefill")
+suggested_competence_ids: list = []
+suggested_metier_ids: list = []
+suggested_localisation_ids: list = []
 
-if analysis:
+if profile_prefill:
+    st.info(
+        "✏️ Tu modifies ton profil existant — les champs ci-dessous sont pré-remplis "
+        "avec tes informations actuelles. Corrige ce qui a changé, puis valide."
+    )
+    suggested_competence_ids = [c["id"] for c in profile_prefill["competences"]]
+    suggested_metier_ids = [m["id"] for m in profile_prefill["metiers"]]
+    suggested_localisation_ids = [l["id"] for l in profile_prefill["localisations"]]
+
+elif analysis:
     if analysis.get("resolution_error"):
         st.warning(
             f"Résolution automatique des compétences indisponible ({analysis['resolution_error']}) "
@@ -144,18 +188,34 @@ st.divider()
 st.subheader("2️⃣ Ton profil")
 
 with st.form("profil_client_form"):
+    if profile_prefill:
+        default_nom = profile_prefill.get("nom") or ""
+        default_prenom = profile_prefill.get("prenom") or ""
+        default_email = profile_prefill.get("email") or ""
+    elif analysis:
+        default_nom = analysis.get("nom_suggere") or ""
+        default_prenom = analysis.get("prenom_suggere") or ""
+        default_email = analysis.get("email_suggere") or ""
+    else:
+        default_nom = default_prenom = default_email = ""
+
     col1, col2 = st.columns(2)
     with col1:
-        nom = st.text_input("Nom *", value=(analysis.get("nom_suggere") or "") if analysis else "")
+        nom = st.text_input("Nom *", value=default_nom)
     with col2:
-        prenom = st.text_input("Prénom *", value=(analysis.get("prenom_suggere") or "") if analysis else "")
-    email = st.text_input("Email *", value=(analysis.get("email_suggere") or "") if analysis else "")
+        prenom = st.text_input("Prénom *", value=default_prenom)
+    email = st.text_input("Email *", value=default_email)
 
-    st.markdown("**🎓 Formation & expérience** — suggérées par le CV si disponible, modifiables")
+    st.markdown("**🎓 Formation & expérience** — suggérées si disponibles, modifiables")
+    id_formation_suggere = (
+        profile_prefill.get("id_formation") if profile_prefill
+        else analysis.get("id_formation_suggere") if analysis
+        else None
+    )
     formation_ids = list(formations.keys())
     default_formation_idx = (
-        formation_ids.index(analysis["id_formation_suggere"])
-        if analysis and analysis["id_formation_suggere"] in formation_ids
+        formation_ids.index(id_formation_suggere)
+        if id_formation_suggere in formation_ids
         else 0
     )
     id_formation = st.selectbox(
@@ -165,10 +225,15 @@ with st.form("profil_client_form"):
         index=default_formation_idx,
     )
 
+    id_experience_suggere = (
+        profile_prefill.get("id_experience") if profile_prefill
+        else analysis.get("id_experience_suggere") if analysis
+        else None
+    )
     experience_ids = list(experiences.keys())
     default_experience_idx = (
-        experience_ids.index(analysis["id_experience_suggere"])
-        if analysis and analysis["id_experience_suggere"] in experience_ids
+        experience_ids.index(id_experience_suggere)
+        if id_experience_suggere in experience_ids
         else 0
     )
     id_experience = st.selectbox(
@@ -178,7 +243,7 @@ with st.form("profil_client_form"):
         index=default_experience_idx,
     )
 
-    st.markdown("**🛠️ Compétences** — pré-sélectionnées depuis le CV si disponible")
+    st.markdown("**🛠️ Compétences** — pré-sélectionnées si disponibles")
     ids_competences = st.multiselect(
         "Compétences *",
         options=list(competences_ref.keys()),
@@ -194,23 +259,36 @@ with st.form("profil_client_form"):
         default=[mid for mid in suggested_metier_ids if mid in metiers],
         help="Suggérés depuis le titre du CV si trouvé (plusieurs si le CV en cite plusieurs, ex. \"Data Engineer / Analytics Engineer\") — vérifie que ce sont bien des postes visés, pas juste le poste actuel.",
     )
+
+    id_contrat_suggere = profile_prefill.get("id_contrat") if profile_prefill else None
+    contrat_ids = list(contrats.keys())
+    default_contrat_idx = (
+        contrat_ids.index(id_contrat_suggere)
+        if id_contrat_suggere in contrat_ids
+        else 0
+    )
     id_contrat = st.selectbox(
         "Type de contrat recherché *",
-        options=list(contrats.keys()),
+        options=contrat_ids,
         format_func=lambda x: contrats[x],
+        index=default_contrat_idx,
         help="Rarement présent sur un CV — critère strict : seules les offres de ce type te seront proposées.",
     )
+
     ids_localisations = st.multiselect(
         "Villes où tu cherches un poste *",
         options=list(localisations_ref.keys()),
         format_func=lambda x: localisations_ref[x],
+        default=[lid for lid in suggested_localisation_ids if lid in localisations_ref],
     )
 
+    default_salaire_min = int(profile_prefill.get("salaire_min")) if profile_prefill and profile_prefill.get("salaire_min") is not None else 30000
+    default_salaire_max = int(profile_prefill.get("salaire_max")) if profile_prefill and profile_prefill.get("salaire_max") is not None else 45000
     col_sal1, col_sal2 = st.columns(2)
     with col_sal1:
-        salaire_min = st.number_input("Salaire min souhaité (€ brut/an) *", min_value=0, step=1000, value=30000)
+        salaire_min = st.number_input("Salaire min souhaité (€ brut/an) *", min_value=0, step=1000, value=default_salaire_min)
     with col_sal2:
-        salaire_max = st.number_input("Salaire max souhaité (€ brut/an) *", min_value=0, step=1000, value=45000)
+        salaire_max = st.number_input("Salaire max souhaité (€ brut/an) *", min_value=0, step=1000, value=default_salaire_max)
 
     submitted = st.form_submit_button("✅ Valider mon profil", type="primary", use_container_width=True)
 
@@ -242,10 +320,13 @@ if submitted:
     id_client, is_new_client = resolve_id_client(email.strip())
     date_soumission = datetime.now(timezone.utc).date().isoformat()
 
-    # --- Upload du CV vers GCS (si un CV a été analysé) ---
+    # --- Upload du CV vers GCS (si un nouveau CV a été analysé) ---
     # Réutilise le même id_client → si le client remplace son profil, son
     # ancien CV est écrasé par le nouveau, pas dupliqué.
-    cv_storage_path = None
+    # Si on modifie un profil existant SANS re-uploader de CV, on garde le
+    # cv_storage_path déjà enregistré (sinon il serait effacé silencieusement
+    # au premier "Modifier mon profil" sans nouveau CV).
+    cv_storage_path = profile_prefill.get("cv_storage_path") if profile_prefill else None
     if analysis and analysis.get("cv_bytes"):
         try:
             bucket = get_gcs_client().bucket(BUCKET_NAME)
@@ -287,6 +368,7 @@ if submitted:
     if cv_storage_path:
         st.caption(f"CV stocké : `{cv_storage_path}`")
     st.session_state.cv_analysis = None
+    st.session_state["profile_prefill"] = None
 
 # --- Bouton vers la page recommandations ---
 # Volontairement HORS du bloc "if submitted:" : ce bloc ne s'exécute que sur

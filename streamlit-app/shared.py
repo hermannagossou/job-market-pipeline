@@ -335,6 +335,20 @@ def resolve_experience(annees, experiences_ref: dict) -> int | None:
     return None
 
 
+def find_client_by_email(email: str) -> str | None:
+    """Recherche pure : retourne l'id_client si un profil existe déjà pour cet
+    email, sinon None. Contrairement à resolve_id_client (utilisée à la
+    soumission), celle-ci ne génère jamais de nouvel id — elle sert
+    uniquement à vérifier si un client peut se reconnecter à son profil
+    existant, sans rien créer ni modifier."""
+    query = f"SELECT id_client FROM `{TABLE_CLIENTS}` WHERE email = @email LIMIT 1"
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("email", "STRING", email)]
+    )
+    rows = list(get_bq_client().query(query, job_config=job_config).result())
+    return rows[0]["id_client"] if rows else None
+
+
 def resolve_id_client(email: str) -> tuple[str, bool]:
     """Réutilise l'id_client existant si l'email est déjà dans dim_clients
     (upsert par email), sinon en génère un nouveau. Retourne (id_client, est_nouveau)."""
@@ -433,14 +447,74 @@ def upsert_client_profile(
     get_bq_client().query(script, job_config=job_config).result()
 
 
+def get_client_profile(id_client: str) -> dict | None:
+    """Récupère le profil complet d'un client : infos de base + libellés
+    résolus (formation, expérience, contrat) + listes détaillées (id + label)
+    des compétences, métiers, localisations. Sert à la fois à l'affichage sur
+    la page recommandations et au pré-remplissage du formulaire en cas de
+    modification. Retourne None si l'id_client n'existe pas."""
+    client = get_bq_client()
+
+    query_profil = f"""
+        SELECT
+            dc.nom, dc.prenom, dc.email,
+            dc.id_formation, df.niveau AS formation_label,
+            dc.id_experience, de.niveau AS experience_label,
+            dc.id_contrat, dcon.contrat AS contrat_label,
+            dc.salaire_min, dc.salaire_max,
+            dc.cv_storage_path, dc.date_soumission
+        FROM `{TABLE_CLIENTS}` dc
+        JOIN `{PROJECT_ID}.{DATASET}.dim_formations` df ON df.id_formation = dc.id_formation
+        JOIN `{PROJECT_ID}.{DATASET}.dim_experiences` de ON de.id_experience = dc.id_experience
+        JOIN `{PROJECT_ID}.{DATASET}.dim_contrats` dcon ON dcon.id_contrat = dc.id_contrat
+        WHERE dc.id_client = @id_client
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("id_client", "STRING", id_client)]
+    )
+    rows = list(client.query(query_profil, job_config=job_config).result())
+    if not rows:
+        return None
+    profil = dict(rows[0].items())
+
+    def _fetch_liste(table_bridge: str, table_dim: str, col_id: str, col_label: str) -> list[dict]:
+        q = f"""
+            SELECT b.{col_id} AS id, d.{col_label} AS label
+            FROM `{PROJECT_ID}.{DATASET}.{table_bridge}` b
+            JOIN `{PROJECT_ID}.{DATASET}.{table_dim}` d ON d.{col_id} = b.{col_id}
+            WHERE b.id_client = @id_client
+            ORDER BY d.{col_label}
+        """
+        jc = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("id_client", "STRING", id_client)]
+        )
+        return [dict(r.items()) for r in client.query(q, job_config=jc).result()]
+
+    profil["competences"] = _fetch_liste("bridge_clients_competences", "dim_competences", "id_competence", "competence")
+    profil["metiers"] = _fetch_liste("bridge_clients_metiers", "dim_metiers", "id_metier", "nom")
+    profil["localisations"] = _fetch_liste("bridge_clients_localisations", "dim_localisations", "id_localisation", "ville")
+
+    return profil
+
+
 def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
     """Calcule les recommandations d'offres pour un client, en temps réel.
 
-    Reprend exactement la logique validée manuellement dans BigQuery (filtre dur
-    formation/expérience/contrat, score_exact, score_embedding normalisé,
-    score_preferences) — paramétrée ici via un ScalarQueryParameter plutôt
-    qu'un DECLARE en dur, pour être appelée en toute sécurité avec n'importe
-    quel id_client sans risque d'injection SQL.
+    Filtre dur sur 6 critères : formation, expérience, contrat (exigences
+    objectives de l'offre) + métier, localisation, salaire (préférences du
+    client, désormais traitées comme non-négociables plutôt que pondérées —
+    décision prise après observation de résultats peu pertinents en pratique,
+    ex. une offre à Versailles remontée pour un client visant Toulouse).
+
+    Le chevauchement salaire est un chevauchement de plage (pas une égalité
+    stricte) : l'offre est éligible si sa fourchette recoupe au moins
+    partiellement celle du client, ni entièrement en dessous, ni entièrement
+    au-dessus.
+
+    score_final ne combine plus que les 2 scores de compétences (plus rien à
+    pondérer côté préférences, devenues des filtres) :
+        score_final = 0.625 × score_exact + 0.375 × score_embedding
+    (même ratio 5:3 qu'avant entre les deux, remis à l'échelle sur 100%).
     """
     query = f"""
         WITH
@@ -468,6 +542,16 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             WHERE cp.client_rang_formation >= df.rang_formation
               AND cp.client_rang_experience >= de.rang_experience
               AND fo.id_contrat = cp.client_id_contrat
+              AND fo.id_metier IN (
+                  SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
+                  WHERE id_client = @id_client
+              )
+              AND fo.id_localisation IN (
+                  SELECT id_localisation FROM `{PROJECT_ID}.{DATASET}.bridge_clients_localisations`
+                  WHERE id_client = @id_client
+              )
+              AND fo.salaire_max >= cp.client_salaire_min
+              AND fo.salaire_min <= cp.client_salaire_max
         ),
         competences_client AS (
             SELECT id_competence FROM `{PROJECT_ID}.{DATASET}.bridge_clients_competences`
@@ -511,30 +595,6 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
                     NULLIF(MAX(distance) OVER () - MIN(distance) OVER (), 0)
                 ) AS score_embedding
             FROM score_embedding_raw
-        ),
-        localisations_client AS (
-            SELECT id_localisation FROM `{PROJECT_ID}.{DATASET}.bridge_clients_localisations`
-            WHERE id_client = @id_client
-        ),
-        metiers_client AS (
-            SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
-            WHERE id_client = @id_client
-        ),
-        score_preferences_calc AS (
-            SELECT
-                oe.id_offre,
-                COALESCE(
-                    GREATEST(0,
-                        LEAST(cp.client_salaire_max, oe.offre_salaire_max)
-                        - GREATEST(cp.client_salaire_min, oe.offre_salaire_min)
-                    ) / NULLIF(cp.client_salaire_max - cp.client_salaire_min, 0)
-                , 0) AS score_salaire,
-                CASE WHEN oe.id_localisation IN (SELECT id_localisation FROM localisations_client)
-                     THEN 1.0 ELSE 0.0 END AS score_localisation,
-                CASE WHEN oe.id_metier IN (SELECT id_metier FROM metiers_client)
-                     THEN 1.0 ELSE 0.3 END AS score_metier
-            FROM offres_eligibles oe
-            CROSS JOIN client_profile cp
         )
         SELECT
             oe.id_offre,
@@ -545,16 +605,13 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             oe.offre_salaire_max,
             COALESCE(sec.score_exact, 0) AS score_exact,
             COALESCE(sem.score_embedding, 0) AS score_embedding,
-            ROUND((spc.score_salaire + spc.score_localisation + spc.score_metier) / 3, 3) AS score_preferences,
             ROUND(
-                0.5 * COALESCE(sec.score_exact, 0)
-                + 0.3 * COALESCE(sem.score_embedding, 0)
-                + 0.2 * ((spc.score_salaire + spc.score_localisation + spc.score_metier) / 3)
+                0.625 * COALESCE(sec.score_exact, 0)
+                + 0.375 * COALESCE(sem.score_embedding, 0)
             , 3) AS score_final
         FROM offres_eligibles oe
         LEFT JOIN score_exact_calc sec ON sec.id_offre = oe.id_offre
         LEFT JOIN score_embedding_calc sem ON sem.id_offre = oe.id_offre
-        JOIN score_preferences_calc spc ON spc.id_offre = oe.id_offre
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_entreprises` dent ON dent.id_entreprise = oe.id_entreprise
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_localisations` dl ON dl.id_localisation = oe.id_localisation
