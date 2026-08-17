@@ -3,8 +3,17 @@
 -- Sortie  : une ligne par couple (offre, compétence) ; toutes les compétences sont dans le seed.
 --
 -- Optimisations coût vs version sans liste fixe :
---   1. Description tronquée à 2000 chars — les skills apparaissent quasi-systématiquement
---      dans les premiers tiers de l'offre (techno stack, prérequis), pas en fin de texte.
+--   1. Texte envoyé au LLM limité à 4500 caractères (vs 2000 initialement).
+--      Une première version tentait de repérer par regex une section dédiée
+--      "Compétences techniques"/"Profil recherché" au-delà des 2000 premiers
+--      caractères plutôt que d'augmenter la coupure -- abandonnée : cas
+--      confirmé (Sopra Steria) où le stack technique (SQL, Spark, Pyspark,
+--      Kafka...) est cité au fil d'un paragraphe "Vos missions", sans aucun
+--      intitulé de section détectable, et donc invisible pour cette regex.
+--      Sur les 5 cas réels diagnostiqués aujourd'hui (REXEL, Article 1,
+--      Sopra Steria, Alice & Bob, WE DO GOOD), la dernière compétence utile
+--      se situe au plus tard vers 4040 caractères -- 4500 couvre tous les
+--      cas observés sans dépendre d'une structure d'annonce particulière.
 --   2. Liste injectée depuis {{ ref('competences') }} via STRING_AGG : le LLM choisit dans
 --      un vocabulaire contraint — plus de normalisation canonique à maintenir manuellement.
 --   3. JOIN de validation post-LLM (inner join sur le seed) : filtre dur qui garantit
@@ -75,7 +84,7 @@ reponses_llm as (
 
                     Offre :
                     """,
-                    substr(o.description, 1, 2000)
+                    substr(o.description, 1, 4500)
                 ) as prompt,
                 o.id,
                 o.nom_plateforme
