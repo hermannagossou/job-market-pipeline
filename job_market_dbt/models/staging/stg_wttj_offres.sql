@@ -47,6 +47,15 @@ colonnes_utiles as (
         'Welcome to the Jungle' as nom_plateforme,
         1 as nbre_postes
     from source
+),
+
+-- Dédoublonnage, même logique et même raison que côté France Travail (voir
+-- stg_france_travail_offres.sql) -- aucun filtre équivalent n'existait ici
+-- non plus.
+dedoublonnees as (
+    select *
+    from colonnes_utiles
+    qualify row_number() over (partition by id order by date_publication desc) = 1
 )
 
-select * from colonnes_utiles
+select * from dedoublonnees
