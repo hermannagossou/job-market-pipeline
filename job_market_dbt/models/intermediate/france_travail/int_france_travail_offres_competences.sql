@@ -122,5 +122,5 @@ competences_validees as (
         on lower(cs.competence_llm) = lower(c.skill_name)
 )
 
-select id, competence, nom_plateforme
+select distinct id, competence, nom_plateforme
 from competences_validees
