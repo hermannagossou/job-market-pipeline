@@ -1,27 +1,28 @@
 """
-Job Market — Page "Mes recommandations"
+Job Market — Vue "Mes recommandations"
 ==========================================
-Page accessible depuis app.py après soumission réussie du formulaire (bouton
+Déclarée comme page via st.Page() dans app.py — ce fichier n'est pas exécuté
+directement (streamlit run app.py reste le seul point d'entrée). Accessible
+depuis la vue "Mon profil" après soumission réussie du formulaire (bouton
 "Voir mes offres recommandées"), ou directement si le client revient plus
 tard dans la même session.
 
-Lit l'id_client depuis st.session_state (rempli par app.py à la soumission) —
-rien n'est recalculé pour un autre client que celui qui vient de s'inscrire
-dans cette session.
+Lit l'id_client depuis st.session_state (rempli par la vue "Mon profil" à la
+soumission) — rien n'est recalculé pour un autre client que celui qui vient
+de s'inscrire dans cette session.
 """
 
 import streamlit as st
 
 from shared import get_client_profile, get_recommendations
 
-st.set_page_config(page_title="Job Market — Mes recommandations", page_icon="🎯", layout="centered")
 st.title("🎯 Tes offres recommandées")
 
 id_client = st.session_state.get("last_client_id")
 
 if not id_client:
     st.info("Aucun profil trouvé dans cette session — remplis d'abord le formulaire.")
-    st.page_link("app.py", label="Remplir mon profil", icon="📋")
+    st.page_link("views/mon_profil.py", label="Remplir mon profil", icon="📋")
     st.stop()
 
 # =============================================================================
@@ -58,7 +59,7 @@ if profil:
         st.divider()
         if st.button("✏️ Modifier mon profil", use_container_width=True):
             st.session_state["profile_prefill"] = profil
-            st.switch_page("app.py")
+            st.switch_page("views/mon_profil.py")
 
 st.divider()
 
@@ -95,4 +96,4 @@ else:
                 st.metric("Score", f"{offre['score_final']*100:.0f}%")
 
 st.divider()
-st.page_link("app.py", label="Remplir un nouveau profil", icon="📋")
+st.page_link("views/mon_profil.py", label="Remplir un nouveau profil", icon="📋")

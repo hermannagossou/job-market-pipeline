@@ -529,14 +529,6 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
 
     score_final combine les 3 scores avec les poids d'origine du projet :
         score_final = 0.5 × score_exact + 0.3 × score_embedding + 0.2 × score_metier
-
-    Dédoublonnage par contenu (métier + entreprise + salaire) en toute fin de
-    requête : un même recruteur republie parfois la même annonce à quelques
-    jours d'écart sous un id différent (cas confirmé : REXEL FRANCE, deux
-    annonces identiques du 05/08 et du 07/08 pour le même poste). Ce n'est
-    pas un doublon d'ingestion — chaque id_offre est légitime et unique côté
-    fact_offres — mais afficher deux fois la même offre à l'utilisateur
-    n'apporte rien. On garde la ligne au score le plus haut par groupe.
     """
     query = f"""
         WITH
@@ -684,11 +676,6 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_entreprises` dent ON dent.id_entreprise = oe.id_entreprise
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_localisations` dl ON dl.id_localisation = oe.id_localisation
-        QUALIFY ROW_NUMBER() OVER (
-            PARTITION BY oe.id_metier, oe.id_entreprise,
-                CAST(oe.offre_salaire_min AS INT64), CAST(oe.offre_salaire_max AS INT64)
-            ORDER BY score_final DESC
-        ) = 1
         ORDER BY score_final DESC
         LIMIT {top_n}
     """
