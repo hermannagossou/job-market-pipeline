@@ -500,19 +500,22 @@ def get_client_profile(id_client: str) -> dict | None:
 def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
     """Calcule les recommandations d'offres pour un client, en temps réel.
 
-    Filtre dur sur 5 critères : formation, expérience, contrat (exigences
-    objectives de l'offre) + localisation, salaire (préférences client sans
-    ambiguïté possible — soit l'offre est dans la bonne ville, soit non).
+    Filtre dur sur 6 critères : formation, expérience, contrat (exigences
+    objectives de l'offre) + localisation, salaire, métier (préférences
+    client sans ambiguïté possible).
 
-    Le métier N'EST PAS un filtre dur — historique de la décision : d'abord
-    filtre dur (trop restrictif, résultats quasi vides en pratique une fois
-    cumulé aux 5 autres filtres) ; puis score plat 1.0/0.3 (trop permissif,
-    laissait remonter des métiers très éloignés comme "Machine Learning
-    Engineer" pour un profil "Data Analyst"). Solution retenue : un score
-    gradué par similarité sémantique (embedding), qui capture la vraie
-    proximité entre métiers plutôt qu'un choix binaire — un métier proche
-    (Data Engineer) obtient un bon score, un métier éloigné (ML Engineer)
-    est naturellement pénalisé, sans exclure personne à tort.
+    Métier passé en filtre dur le 23 août (option retenue : "C", sans repli
+    automatique) — remplace le score gradué par embedding utilisé jusque-là.
+    Historique complet de la décision : filtre dur (trop restrictif au
+    départ, écarté) -> score plat 1.0/0.3 (trop permissif, écarté) -> score
+    gradué par embedding (retenu un temps) -> filtre dur de nouveau,
+    définitivement cette fois. Le déclencheur : sur le profil "Hermann"
+    (Analytics Engineer/Data Analyst), la seule offre disponible à Toulouse
+    était un Data Scientist à 35% — comportement jugé plus déroutant que
+    rigoureux une fois montré concrètement. Assumé : ça peut désormais
+    renvoyer 0 résultat si aucune offre du métier exact n'existe dans la
+    zone/le budget du client (cas réel : Toulouse, Analytics Engineer/Data
+    Analyst -> 0 résultat, alors qu'un Data Scientist existait).
 
     Exclut aussi les offres sans aucune compétence renseignée dans
     bridge_offres_competences (score_exact/score_embedding y seraient à 0
@@ -527,8 +530,19 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
     Engineer à 24-36k perdues sur un budget 30-60k, malgré 6k€ de
     recoupement réel).
 
-    score_final combine les 3 scores avec les poids d'origine du projet :
-        score_final = 0.5 × score_exact + 0.3 × score_embedding + 0.2 × score_metier
+    score_final combine 2 scores, renormalisés après le retrait de
+    score_metier (le métier étant maintenant un filtre dur à correspondance
+    exacte garantie, un score métier gradué n'apporterait plus rien à
+    distinguer) :
+        score_final = 0.625 × score_exact + 0.375 × score_embedding
+
+    Dédoublonnage par contenu (métier + entreprise + salaire) en toute fin de
+    requête : un même recruteur republie parfois la même annonce à quelques
+    jours d'écart sous un id différent (cas confirmé : REXEL FRANCE, deux
+    annonces identiques du 05/08 et du 07/08 pour le même poste). Ce n'est
+    pas un doublon d'ingestion — chaque id_offre est légitime et unique côté
+    fact_offres — mais afficher deux fois la même offre à l'utilisateur
+    n'apporte rien. On garde la ligne au score le plus haut par groupe.
     """
     query = f"""
         WITH
@@ -563,6 +577,10 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
               )
               AND fo.salaire_min <= cp.client_salaire_max
               AND fo.salaire_max >= cp.client_salaire_min
+              AND fo.id_metier IN (
+                  SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
+                  WHERE id_client = @id_client
+              )
               AND fo.id_offre IN (
                   SELECT DISTINCT id_offre FROM `{PROJECT_ID}.{DATASET}.bridge_offres_competences`
               )
@@ -609,49 +627,6 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
                     NULLIF(MAX(distance) OVER () - MIN(distance) OVER (), 0)
                 ) AS score_embedding
             FROM score_embedding_raw
-        ),
-        texte_metiers_client AS (
-            SELECT STRING_AGG(dm.nom, ', ') AS content
-            FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers` bcm
-            JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = bcm.id_metier
-            WHERE bcm.id_client = @id_client
-        ),
-        metiers_client_ids AS (
-            SELECT id_metier FROM `{PROJECT_ID}.{DATASET}.bridge_clients_metiers`
-            WHERE id_client = @id_client
-        ),
-        score_metier_raw AS (
-            SELECT base.id_metier, distance
-            FROM VECTOR_SEARCH(
-                TABLE `{PROJECT_ID}.{DATASET}.dim_metiers_embeddings`,
-                'ml_generate_embedding_result',
-                (
-                    SELECT ml_generate_embedding_result
-                    FROM ML.GENERATE_EMBEDDING(
-                        MODEL `{PROJECT_ID}.{DATASET}.embedding_model`,
-                        (SELECT content FROM texte_metiers_client)
-                    )
-                ),
-                top_k => 1000
-            )
-        ),
-        score_metier_calc AS (
-            -- Match exact avec un des métiers choisis -> 1.0, garanti.
-            -- Sinon, similarité sémantique graduée (pas une pénalité plate) :
-            -- un métier proche (ex. Data Engineer) obtient un score correct,
-            -- un métier vraiment éloigné (ex. Machine Learning Engineer) est
-            -- naturellement pénalisé par sa distance, sans qu'on ait besoin
-            -- de le décider à la main.
-            SELECT
-                id_metier,
-                CASE
-                    WHEN id_metier IN (SELECT id_metier FROM metiers_client_ids) THEN 1.0
-                    ELSE SAFE_DIVIDE(
-                        MAX(distance) OVER () - distance,
-                        NULLIF(MAX(distance) OVER () - MIN(distance) OVER (), 0)
-                    )
-                END AS score_metier
-            FROM score_metier_raw
         )
         SELECT
             oe.id_offre,
@@ -663,19 +638,21 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             oe.lien_offre,
             COALESCE(sec.score_exact, 0) AS score_exact,
             COALESCE(sem.score_embedding, 0) AS score_embedding,
-            COALESCE(smc.score_metier, 0) AS score_metier,
             ROUND(
-                0.5 * COALESCE(sec.score_exact, 0)
-                + 0.3 * COALESCE(sem.score_embedding, 0)
-                + 0.2 * COALESCE(smc.score_metier, 0)
+                0.625 * COALESCE(sec.score_exact, 0)
+                + 0.375 * COALESCE(sem.score_embedding, 0)
             , 3) AS score_final
         FROM offres_eligibles oe
         LEFT JOIN score_exact_calc sec ON sec.id_offre = oe.id_offre
         LEFT JOIN score_embedding_calc sem ON sem.id_offre = oe.id_offre
-        LEFT JOIN score_metier_calc smc ON smc.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_metiers` dm ON dm.id_metier = oe.id_metier
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_entreprises` dent ON dent.id_entreprise = oe.id_entreprise
         LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_localisations` dl ON dl.id_localisation = oe.id_localisation
+        QUALIFY ROW_NUMBER() OVER (
+            PARTITION BY oe.id_metier, oe.id_entreprise,
+                CAST(oe.offre_salaire_min AS INT64), CAST(oe.offre_salaire_max AS INT64)
+            ORDER BY score_final DESC
+        ) = 1
         ORDER BY score_final DESC
         LIMIT {top_n}
     """
