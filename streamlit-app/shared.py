@@ -139,7 +139,12 @@ FORMATION_KEYWORDS = {
     "Bac+3": ["bac+3", "licence", "bachelor"],
     "Bac+2": ["bac+2", "bts", "dut"],
 }
-EXPERIENCE_SEUILS = [(1, "Junior"), (4, "Confirmé"), (8, "Senior")]  # au-delà -> "Expert"
+EXPERIENCE_SEUILS = [(2, "Junior"), (5, "Confirmé"), (10, "Senior")]  # au-delà -> "Expert"
+# Aligné sur la classification côté offres (int_france_travail_niveau_experience.sql,
+# ajustée le 23 août) : 0-2 ans Junior, 3-5 Confirmé, 6-10 Senior, >10 Expert.
+# Avant : (1, "Junior"), (4, "Confirmé"), (8, "Senior") — désynchronisé du côté offres,
+# le filtre dur client_rang_experience >= offre_rang_experience comparait deux
+# définitions différentes de chaque niveau.
 
 
 # ---------------------------------------------------------------------------
