@@ -185,7 +185,7 @@ score_embedding_calc as (
             nullif(max(distance) over (partition by id_client) - min(distance) over (partition by id_client), 0)
         ) as score_embedding
     from score_embedding_raw
-),
+)
 
 -- ASSEMBLAGE FINAL
 select
