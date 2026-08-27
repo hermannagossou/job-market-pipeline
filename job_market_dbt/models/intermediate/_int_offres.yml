@@ -1,0 +1,147 @@
+version: 2
+
+models:
+  - name: int_offres
+    description: "{{ doc('int_offres') }}"
+    columns:
+      - name: id
+        description: "Identifiant unique de l'offre (clé primaire, toutes plateformes)"
+        data_tests:
+          - unique
+          - not_null
+      - name: nom_metier
+        description: "Métier data normalisé parmi les 13 catégories définies"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Data Engineer', 'Data Analyst', 'Data Scientist', 'Machine Learning Engineer', 'Analytics Engineer', 'Data Architect', 'Business Intelligence Analyst', 'Data Product Manager', 'Chief Data Officer', 'Data Steward', 'Data Manager', 'Dataops Engineer', 'Mlops Engineer']
+      - name: nom_entreprise
+        description: "Nom de l'entreprise"
+        data_tests:
+          - not_null
+      - name: type_contrat
+        description: "Type de contrat normalisé"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Non Renseigné']
+      - name: niveau_formation
+        description: "Niveau de formation requis"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
+      - name: niveau_experience
+        description: "Niveau d'expérience requis"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
+      - name: ville
+        description: "Nom de la ville"
+        data_tests:
+          - not_null
+      - name: departement
+        description: "Nom du département"
+        data_tests:
+          - not_null
+      - name: region
+        description: "Nom de la région"
+        data_tests:
+          - not_null
+      - name: salaire_min
+        description: "Salaire minimum annuel brut en euros (déclaré ou imputé)"
+        data_tests:
+          - not_null
+      - name: salaire_max
+        description: "Salaire maximum annuel brut en euros (déclaré ou imputé)"
+        data_tests:
+          - not_null
+      - name: statut_salaire
+        description: "Origine du salaire : Déclaré, Incomplet ou Estimé"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Estimé', 'Déclaré', 'Incomplet']
+      - name: nom_secteur
+        description: "Secteur d'activité de l'entreprise"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Banque & Finance', 'Assurance', 'Télécommunications', 'Retail & E-Commerce', 'Industrie & Manufacturing', 'Santé & Pharmaceutique', 'Conseil & Esn', 'Média & Divertissement', 'Logistique & Transport', 'Énergie & Environnement', 'Immobilier & Construction', 'Éducation & Recherche', 'Administration Publique', 'Startup & Tech', 'Autre']
+      - name: date_publication
+        description: "Date de publication de l'offre"
+        data_tests:
+          - not_null
+      - name: nom_plateforme
+        description: "Plateforme source de l'offre"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['France Travail', 'Welcome To The Jungle']
+      - name: nbre_postes
+        description: "Nombre de postes à pourvoir"
+        data_tests:
+          - not_null
+
+  - name: int_offres_competences
+    description: "{{ doc('int_offres_competences') }}"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [id, competence]
+    columns:
+      - name: id
+        description: "Identifiant de l'offre"
+        data_tests:
+          - not_null
+      - name: competence
+        description: "Compétence technique extraite et validée"
+        data_tests:
+          - not_null
+      - name: nom_plateforme
+        description: "Plateforme source de l'offre"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['France Travail', 'Welcome To The Jungle']
+
+  - name: int_offres_langues
+    description: "{{ doc('int_offres_langues') }}"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [id, langue]
+    columns:
+      - name: id
+        description: "Identifiant de l'offre"
+        data_tests:
+          - not_null
+      - name: langue
+        description: "Langue extraite depuis l'API ou la description de l'offre, ou 'Non Renseigné'"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [
+                  'Anglais', 'Français', 'Espagnol', 'Allemand', 'Italien',
+                  'Portugais', 'Chinois', 'Mandarin', 'Japonais', 'Arabe',
+                  'Néerlandais', 'Hollandais', 'Russe', 'Coréen', 'Turc',
+                  'Polonais', 'Suédois', 'Danois', 'Norvégien', 'Finnois',
+                  'Hindi', 'Non Renseigné'
+                ]
+      - name: nom_plateforme
+        description: "Plateforme source de l'offre"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['France Travail', 'Welcome To The Jungle']

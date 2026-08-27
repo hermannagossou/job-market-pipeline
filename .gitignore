@@ -40,3 +40,11 @@ Thumbs.db
 
 # Environnement virtuel
 job-market-venv/
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+.agents/
+
+# Claude
+.claude/
