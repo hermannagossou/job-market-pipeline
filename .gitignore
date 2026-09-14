@@ -40,6 +40,8 @@ Thumbs.db
 
 # Environnement virtuel
 job-market-venv/
+api-venv/
+dashboard-venv/
 
 # Streamlit
 .streamlit/
