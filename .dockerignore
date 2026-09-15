@@ -1,0 +1,23 @@
+# Caches Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# Environnements virtuels
+env_projet/
+venv/
+.venv/
+
+# Secrets — ne JAMAIS copier dans l'image (montés via volume à la place)
+.env
+credentials.json
+*.json.key
+
+# Divers
+.git/
+.gitignore
+*.md
+.DS_Store

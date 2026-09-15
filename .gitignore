@@ -1,44 +1,25 @@
-# Secrets — JAMAIS commiter
+# Secrets — ne JAMAIS committer
 .env
-*.env
-secrets/
 credentials.json
+*.json.key
 
+# Fonds de carte téléchargés (volumineux, régénérables via download_geojson.py)
+streamlit/assets/*.geojson
 
-# Python
+# Caches Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
-.venv/
-venv/
-env/
-*.egg-info/
-dist/
-build/
+*.pyd
 .pytest_cache/
+.ruff_cache/
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
+# Environnements virtuels
+env_projet/
+venv/
+.venv/
 
-# dbt
-dbt/target/
-dbt/dbt_packages/
-dbt/logs/
-
-# Airflow
-airflow/logs/
-airflow.db
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
+# IDE / OS
 .vscode/
 .idea/
-
-# Environnement virtuel
-job-market-venv/
-
-logs/
+.DS_Store

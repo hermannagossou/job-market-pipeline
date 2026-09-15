@@ -1,0 +1,62 @@
+# Lance l'API et le dashboard Streamlit ensemble :
+#     docker compose up --build
+#
+# - API accessible sur       http://localhost:8000  (docs : /docs)
+# - Dashboard accessible sur http://localhost:8501
+#
+# AUTHENTIFICATION BIGQUERY (important) :
+# On ne peut pas exécuter `gcloud auth application-default login` dans un
+# conteneur. Deux options, toutes deux basées sur le montage d'un fichier de
+# credentials en lecture seule :
+#
+#   Option A — service account (recommandé) : placez le fichier JSON du service
+#   account à la racine du projet sous le nom `credentials.json`, et laissez la
+#   configuration ci-dessous telle quelle.
+#
+#   Option B — réutiliser vos ADC locales : montez le fichier ADC de votre
+#   machine à la place (voir le volume commenté plus bas).
+#
+# Les valeurs BQ_PROJECT_ID / BQ_DATASET sont lues depuis votre fichier .env
+# (à la racine, à côté de ce docker-compose.yml).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      BQ_PROJECT_ID: ${BQ_PROJECT_ID}
+      BQ_DATASET: ${BQ_DATASET}
+      # Chemin DU FICHIER TEL QUE MONTÉ DANS LE CONTENEUR (voir volumes ci-dessous).
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/credentials.json
+    volumes:
+      # Option A : monte ./credentials.json (racine du projet) en lecture seule.
+      - ./credentials.json:/secrets/credentials.json:ro
+      # Option B (à la place de la ligne ci-dessus) : réutiliser vos ADC locales.
+      # Décommentez et adaptez selon votre OS :
+      #   Windows : ${APPDATA}/gcloud/application_default_credentials.json
+      #   macOS/Linux : ${HOME}/.config/gcloud/application_default_credentials.json
+      # - ${APPDATA}/gcloud/application_default_credentials.json:/secrets/credentials.json:ro
+    healthcheck:
+      # Vérifie que l'API répond avant de considérer le service "healthy".
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      # Streamlit joint l'API par son NOM DE SERVICE Docker, pas localhost :
+      # dans le réseau Docker, "api" résout vers le conteneur de l'API.
+      API_BASE_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy

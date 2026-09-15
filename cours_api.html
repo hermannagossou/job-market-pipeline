@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les API de A à Z — cours illustré par le projet</title>
+<style>
+  :root {
+    --ink: #12212e;
+    --ink-soft: #40566a;
+    --paper: #f7f9fb;
+    --panel: #ffffff;
+    --line: #dce4ec;
+    --flow: #1d6feb;
+    --flow-deep: #0b3a7a;
+    --signal: #e8871e;
+    --grid: #eef3f7;
+    --code-bg: #0e2233;
+    --code-ink: #cfe3f7;
+    --ok: #1a8a5a;
+    --purple: #7c4dcc;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.68; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    background:
+      radial-gradient(1100px 380px at 78% -40%, rgba(29,111,235,.18), transparent 60%),
+      linear-gradient(180deg, #0b1e2e 0%, #123049 100%);
+    color: #eaf2fb; padding: 64px 0 46px; border-bottom: 3px solid var(--signal);
+  }
+  header.hero .kicker {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--signal); margin-bottom: 14px;
+  }
+  header.hero h1 {
+    font-size: clamp(2rem, 5vw, 3rem); line-height: 1.08; margin: 0 0 14px;
+    font-weight: 600; letter-spacing: -0.01em;
+  }
+  header.hero p { font-size: 1.12rem; color: #b9cfe4; max-width: 60ch; margin: 0; }
+
+  /* sommaire */
+  .toc {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 26px; margin: 34px 0;
+  }
+  .toc h2 { margin: 0 0 14px; font-size: 1.1rem; color: var(--flow-deep); }
+  .toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 30px; }
+  .toc li { margin: 6px 0; break-inside: avoid; }
+  .toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  .toc a:hover { border-bottom-color: var(--flow); color: var(--flow); }
+
+  main { padding: 10px 0 90px; }
+
+  .chapter { scroll-margin-top: 20px; margin: 54px 0 0; }
+  .chapter-tag {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .8rem; color: var(--flow);
+    background: #e7f0fe; border: 1px solid #c5dcfb;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+  }
+  h2.ch-title { font-size: 1.75rem; margin: 4px 0 8px; letter-spacing: -0.01em; line-height: 1.18; }
+  h3 { font-size: 1.2rem; margin: 30px 0 4px; }
+  p { margin: 12px 0; }
+  .lead { font-size: 1.12rem; color: var(--ink-soft); }
+
+  .analogy {
+    border-left: 3px solid var(--signal); background: #fdf6ec;
+    padding: 14px 20px; margin: 18px 0; border-radius: 0 8px 8px 0;
+  }
+  .analogy strong { color: #a75d0a; }
+  .analogy .lbl {
+    display: block; font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+    color: #a75d0a; margin-bottom: 4px;
+  }
+
+  .keyword { background: #e7f0fe; color: var(--flow-deep); padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: .95em; }
+
+  .note { display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 20px 0; }
+  .note .ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; background: var(--flow); color: #fff; display: grid; place-items: center; font-size: 1rem; font-weight: 700; font-family: system-ui; }
+  .note.why .ic { background: var(--signal); }
+  .note.def .ic { background: var(--ok); }
+  .note.project .ic { background: var(--purple); }
+  .note h4 { margin: 0 0 4px; font-size: 1rem; }
+  .note p { margin: 0; font-size: .97rem; color: var(--ink-soft); }
+
+  .project-box {
+    background: linear-gradient(135deg, #f5f0fe, #ece2fb);
+    border: 1px solid #d6c4f2; border-left: 4px solid var(--purple);
+    border-radius: 10px; padding: 16px 20px; margin: 22px 0;
+  }
+  .project-box .lbl {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--purple); font-weight: 700; margin-bottom: 6px;
+  }
+  .project-box p { margin: 6px 0; }
+
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-family: "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace; font-size: .85rem; line-height: 1.55; margin: 16px 0; }
+  pre .c { color: #6f97bd; }
+  pre .k { color: #e8871e; }
+  pre .s { color: #7fd1a3; }
+  code.inl { background: #eef3f7; border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .86em; color: var(--flow-deep); }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: .93rem; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--flow-deep); font-size: .8rem; letter-spacing: .02em; }
+  td code.inl { font-size: .82em; }
+  tr.zebra:nth-child(even) { background: #f4f8fc; }
+
+  .status-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .status-code { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-weight: 700; font-size: 1rem; flex-shrink: 0; width: 48px; }
+  .s2 { color: var(--ok); } .s4 { color: var(--signal); } .s5 { color: #d43d3d; }
+
+  .anatomy { background: var(--code-bg); border-radius: 12px; padding: 22px; margin: 20px 0; font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .88rem; }
+  .anatomy .line { color: var(--code-ink); margin: 3px 0; }
+  .anatomy .anno { color: var(--signal); font-size: .78rem; padding-left: 14px; }
+  .anatomy .m { color: #7fd1a3; font-weight: 700; }
+  .anatomy .u { color: #9fc0ff; }
+  .anatomy .q { color: #e8b06f; }
+
+  .takeaway { background: linear-gradient(180deg, #0b1e2e, #123049); color: #eaf2fb; border-radius: 14px; padding: 24px 28px; margin: 30px 0 0; }
+  .takeaway h3 { margin: 0 0 12px; color: #fff; }
+  .takeaway ul { margin: 0; padding-left: 20px; }
+  .takeaway li { margin: 7px 0; color: #c5d8ea; }
+  .takeaway li strong { color: #fff; }
+
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); margin: 8px 0 0; border: 0; }
+  footer { color: var(--ink-soft); font-size: .88rem; padding: 34px 0 60px; text-align: center; }
+
+  .backtop { display: block; text-align: right; margin-top: 14px; font-size: .82rem; }
+  .backtop a { color: var(--flow); text-decoration: none; }
+
+  @media (max-width: 600px) { .toc ol { columns: 1; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Cours — aucun prérequis</div>
+    <h1>Les API, de A à Z</h1>
+    <p>Comprendre ce qu'est une API en partant de zéro, puis relire chaque brique de ton projet en sachant exactement ce qu'elle fait et pourquoi. Chaque notion est illustrée par ton propre code.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc" id="top">
+    <h2>Plan du cours</h2>
+    <ol>
+      <li><a href="#c1">C'est quoi une API ?</a></li>
+      <li><a href="#c2">Client et serveur</a></li>
+      <li><a href="#c3">HTTP, le langage du web</a></li>
+      <li><a href="#c4">Anatomie d'une requête</a></li>
+      <li><a href="#c5">Les méthodes (GET, POST…)</a></li>
+      <li><a href="#c6">Les codes de statut</a></li>
+      <li><a href="#c7">JSON, le format d'échange</a></li>
+      <li><a href="#c8">REST, le style d'architecture</a></li>
+      <li><a href="#c9">Endpoints &amp; paramètres</a></li>
+      <li><a href="#c10">FastAPI, le framework</a></li>
+      <li><a href="#c11">Pydantic, la validation</a></li>
+      <li><a href="#c12">Tout assembler : ton projet</a></li>
+      <li><a href="#c13">Visite du dossier api/</a></li>
+    </ol>
+  </nav>
+</div>
+
+<main>
+<div class="wrap">
+
+<!-- ============ 1 ============ -->
+<section class="chapter" id="c1">
+  <span class="chapter-tag">Chapitre 1</span>
+  <h2 class="ch-title">C'est quoi une API, au juste ?</h2>
+  <p class="lead">API veut dire <em>Application Programming Interface</em> — « interface de programmation ». Derrière ce nom un peu froid se cache une idée très simple : c'est un <strong>intermédiaire qui permet à deux programmes de se parler</strong>, sans que l'un ait besoin de connaître le fonctionnement interne de l'autre.</p>
+
+  <div class="analogy">
+    <span class="lbl">L'image</span>
+    <strong>Le serveur au restaurant.</strong> Tu ne vas pas en cuisine préparer ton plat. Tu lis un menu, tu passes commande à un serveur, il revient avec l'assiette. Tu ignores totalement comment la cuisine fonctionne — et c'est très bien. L'API, c'est ce serveur : un intermédiaire avec un menu de demandes possibles.
+  </div>
+
+  <p>Une API définit donc deux choses : <strong>ce qu'on peut demander</strong> (le menu) et <strong>sous quelle forme on reçoit la réponse</strong>. Tant que ces deux points ne changent pas, la cuisine peut être réorganisée sans que le client ne s'en aperçoive.</p>
+
+  <div class="note why">
+    <div class="ic">?</div>
+    <div>
+      <h4>Pourquoi ne pas tout mettre au même endroit ?</h4>
+      <p>Parce que séparer les rôles rend chaque partie plus simple, plus sûre et remplaçable. Le dashboard s'occupe d'afficher, l'API s'occupe d'aller chercher les données. Chacun son métier.</p>
+    </div>
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Ton tableau de bord (Streamlit) ne sait pas parler à la base de données BigQuery, et c'est voulu. Il passe par ton API, qui joue le serveur : « donne-moi le nombre d'offres par région » → l'API va chercher, revient avec la réponse. Le dashboard n'a jamais mis les pieds « en cuisine ».</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 2 ============ -->
+<section class="chapter" id="c2">
+  <span class="chapter-tag">Chapitre 2</span>
+  <h2 class="ch-title">Client et serveur : qui parle à qui</h2>
+  <p>Toute communication via API repose sur deux rôles. Le <span class="keyword">client</span> est celui qui <em>demande</em>. Le <span class="keyword">serveur</span> est celui qui <em>répond</em>. Le client envoie une <strong>requête</strong> (request), le serveur renvoie une <strong>réponse</strong> (response). C'est toujours le client qui initie — le serveur ne parle jamais en premier.</p>
+
+  <div class="analogy">
+    <span class="lbl">L'image</span>
+    <strong>Un coup de téléphone.</strong> C'est toi qui appelles (client). L'interlocuteur décroche et répond (serveur). Il ne t'appelle pas spontanément pour te donner l'heure — tu dois demander.
+  </div>
+
+  <p>Un même programme peut être client dans une relation et serveur dans une autre. C'est exactement le cas de ton API.</p>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Ton API est à la fois <strong>serveur</strong> (elle répond à Streamlit) et <strong>cliente</strong> (elle demande des données à BigQuery). Elle est au milieu de la chaîne :</p>
+    <pre style="margin-top:8px"><span class="c">Streamlit</span>  →demande→  <span class="c">API</span>  →demande→  <span class="c">BigQuery</span>
+ (client)              (serveur     (serveur)
+                        ET client)</pre>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 3 ============ -->
+<section class="chapter" id="c3">
+  <span class="chapter-tag">Chapitre 3</span>
+  <h2 class="ch-title">HTTP : le langage commun du web</h2>
+  <p>Pour que client et serveur se comprennent, il leur faut une langue commune. Sur le web, cette langue s'appelle <span class="keyword">HTTP</span> (HyperText Transfer Protocol). C'est un ensemble de règles qui décrivent comment formuler une requête et une réponse. Chaque fois que tu ouvres une page web, ton navigateur parle HTTP sans que tu le saches.</p>
+
+  <p>Le <strong>S</strong> de HTTP<strong>S</strong> ajoute juste le chiffrement (la communication est sécurisée). Le principe reste identique.</p>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>L'essentiel</h4>
+      <p>HTTP est un protocole <strong>requête → réponse</strong>. Une requête part, une réponse revient, et la conversation est terminée. Pour une nouvelle information, on refait une requête. Le serveur ne « se souvient » de rien entre deux appels (on dit qu'il est <em>sans état</em>, stateless).</p>
+    </div>
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Quand ton dashboard affiche la carte des régions, il envoie une requête HTTP à ton API. Quand tu changes un filtre, il en renvoie une nouvelle. Chaque graphique = une ou plusieurs requêtes HTTP.</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 4 ============ -->
+<section class="chapter" id="c4">
+  <span class="chapter-tag">Chapitre 4</span>
+  <h2 class="ch-title">L'anatomie d'une requête</h2>
+  <p>Une requête HTTP est composée de quelques éléments. Décortiquons une vraie requête de ton projet :</p>
+
+  <div class="anatomy">
+    <div class="line"><span class="m">GET</span> <span class="u">http://localhost:8000/api/geo/regions</span><span class="q">?metier=Data+Engineer</span></div>
+    <div class="anno">▲ méthode &nbsp;&nbsp;&nbsp; ▲ adresse (URL) &nbsp;&nbsp;&nbsp; ▲ paramètres</div>
+  </div>
+
+  <p>On y trouve :</p>
+  <table>
+    <tr class="zebra"><th>Élément</th><th>Rôle</th><th>Dans l'exemple</th></tr>
+    <tr class="zebra"><td><strong>Méthode</strong></td><td>L'action voulue</td><td><code class="inl">GET</code> = « donne-moi »</td></tr>
+    <tr class="zebra"><td><strong>URL</strong></td><td>L'adresse de la ressource</td><td><code class="inl">.../api/geo/regions</code></td></tr>
+    <tr class="zebra"><td><strong>Paramètres</strong></td><td>Des précisions sur la demande</td><td><code class="inl">?metier=Data Engineer</code></td></tr>
+    <tr class="zebra"><td><strong>En-têtes</strong> (headers)</td><td>Métadonnées (format attendu, authentification…)</td><td>gérés automatiquement</td></tr>
+    <tr class="zebra"><td><strong>Corps</strong> (body)</td><td>Données envoyées (surtout pour créer/modifier)</td><td>vide pour un GET</td></tr>
+  </table>
+
+  <p>La réponse a une structure symétrique : un <strong>code de statut</strong> (a-t-on réussi ?), des <strong>en-têtes</strong>, et un <strong>corps</strong> (la donnée demandée). On voit ça aux chapitres 6 et 7.</p>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 5 ============ -->
+<section class="chapter" id="c5">
+  <span class="chapter-tag">Chapitre 5</span>
+  <h2 class="ch-title">Les méthodes HTTP : le verbe de la demande</h2>
+  <p>La méthode dit <em>quelle action</em> on veut effectuer. Il en existe plusieurs, mais quatre couvrent l'essentiel — on les résume souvent par l'acronyme <span class="keyword">CRUD</span> (Create, Read, Update, Delete) :</p>
+
+  <table>
+    <tr class="zebra"><th>Méthode</th><th>Intention</th><th>Analogie restaurant</th></tr>
+    <tr class="zebra"><td><code class="inl">GET</code></td><td>Lire une donnée (sans rien modifier)</td><td>Consulter le menu</td></tr>
+    <tr class="zebra"><td><code class="inl">POST</code></td><td>Créer / envoyer une donnée</td><td>Passer une commande</td></tr>
+    <tr class="zebra"><td><code class="inl">PUT</code></td><td>Mettre à jour une donnée existante</td><td>Modifier sa commande</td></tr>
+    <tr class="zebra"><td><code class="inl">DELETE</code></td><td>Supprimer une donnée</td><td>Annuler sa commande</td></tr>
+  </table>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>La distinction clé : lire vs modifier</h4>
+      <p><code class="inl">GET</code> ne change jamais rien côté serveur — on peut le rejouer mille fois sans effet. <code class="inl">POST</code> agit (il crée quelque chose). Cette différence guide le choix de la méthode.</p>
+    </div>
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Ton dashboard ne fait que <strong>consulter</strong> des données pour les afficher : la quasi-totalité de tes endpoints sont donc en <code class="inl">GET</code>. La seule exception prévue est la recommandation par CV, en <code class="inl">POST</code> : là, on <em>envoie</em> le contenu d'un CV à l'API pour qu'elle calcule des correspondances — on transmet une donnée, d'où le POST.</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 6 ============ -->
+<section class="chapter" id="c6">
+  <span class="chapter-tag">Chapitre 6</span>
+  <h2 class="ch-title">Les codes de statut : « ça s'est bien passé ? »</h2>
+  <p>Chaque réponse HTTP commence par un nombre à trois chiffres qui résume le résultat. Le premier chiffre donne la grande famille :</p>
+
+  <div style="margin:18px 0">
+    <div class="status-row"><span class="status-code s2">2xx</span><span><strong>Succès.</strong> Le plus courant : <code class="inl">200 OK</code>. Tout s'est bien passé, la réponse contient la donnée.</span></div>
+    <div class="status-row"><span class="status-code s4">4xx</span><span><strong>Erreur du client.</strong> La demande est fautive. <code class="inl">404 Not Found</code> (adresse inexistante), <code class="inl">422</code> (paramètre invalide).</span></div>
+    <div class="status-row"><span class="status-code s5">5xx</span><span><strong>Erreur du serveur.</strong> La demande était correcte mais le serveur a planté. <code class="inl">500</code> (erreur interne), <code class="inl">503</code> (service indisponible).</span></div>
+  </div>
+
+  <div class="analogy">
+    <span class="lbl">L'image</span>
+    <strong>4xx vs 5xx :</strong> un 4xx, c'est « tu as mal commandé » (plat qui n'existe pas au menu). Un 5xx, c'est « la cuisine a pris feu » — ta commande était valable, mais le problème vient de l'autre côté.
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Tu as rencontré ces codes en vrai ! Le <code class="inl">500</code> quand l'authentification BigQuery manquait (le serveur plantait), et le <code class="inl">404</code> sur la recommandation (la route n'existe pas encore). Ton API transforme d'ailleurs proprement une panne BigQuery en <code class="inl">503</code> avec un message clair, au lieu d'un 500 brut — c'est une bonne pratique de gestion d'erreurs.</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 7 ============ -->
+<section class="chapter" id="c7">
+  <span class="chapter-tag">Chapitre 7</span>
+  <h2 class="ch-title">JSON : le format d'échange</h2>
+  <p>Client et serveur doivent échanger des données dans un format que les deux comprennent. Le standard du web s'appelle <span class="keyword">JSON</span> (JavaScript Object Notation). C'est du texte structuré, lisible par un humain comme par une machine.</p>
+
+  <p>JSON repose sur deux briques : les <strong>objets</strong> (des paires clé-valeur, entre <code class="inl">{ }</code>) et les <strong>listes</strong> (des séries de valeurs, entre <code class="inl">[ ]</code>). Exemple tiré de ton API :</p>
+
+  <pre><span class="c">// un objet : les chiffres clés (réponse de /api/kpis/overview)</span>
+{
+  <span class="s">"nb_offres"</span>: 723,
+  <span class="s">"nb_entreprises"</span>: 412,
+  <span class="s">"nb_metiers"</span>: 13,
+  <span class="s">"nb_regions"</span>: 18
+}
+
+<span class="c">// une liste d'objets : offres par région (/api/geo/regions)</span>
+[
+  { <span class="s">"label"</span>: <span class="s">"Île-de-France"</span>, <span class="s">"nb_offres"</span>: 87 },
+  { <span class="s">"label"</span>: <span class="s">"Occitanie"</span>,     <span class="s">"nb_offres"</span>: 21 }
+]</pre>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>Pourquoi JSON et pas un tableau Excel ?</h4>
+      <p>Parce que JSON est universel : tout langage de programmation sait le lire et l'écrire. Ton API le produit en Python, ton dashboard le relit en Python, mais une appli mobile en Java ou un site en JavaScript pourraient consommer exactement le même JSON.</p>
+    </div>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 8 ============ -->
+<section class="chapter" id="c8">
+  <span class="chapter-tag">Chapitre 8</span>
+  <h2 class="ch-title">REST : une façon d'organiser une API</h2>
+  <p>Jusqu'ici on a vu les briques (HTTP, méthodes, JSON). <span class="keyword">REST</span> est un <strong>style d'architecture</strong> : une manière conventionnelle de les assembler pour construire une API claire et prévisible. Une API qui suit ces conventions est dite « RESTful ».</p>
+
+  <p>Les principes principaux de REST :</p>
+  <table>
+    <tr class="zebra"><th>Principe</th><th>Ce que ça veut dire</th></tr>
+    <tr class="zebra"><td>Ressources identifiées par des URL</td><td>Chaque type de donnée a sa propre adresse : <code class="inl">/regions</code>, <code class="inl">/metiers</code>…</td></tr>
+    <tr class="zebra"><td>Les méthodes portent l'action</td><td>C'est <code class="inl">GET</code>/<code class="inl">POST</code> qui disent quoi faire, pas l'URL.</td></tr>
+    <tr class="zebra"><td>Sans état (stateless)</td><td>Chaque requête est autonome, le serveur ne mémorise rien entre deux appels.</td></tr>
+    <tr class="zebra"><td>Réponses structurées</td><td>Généralement du JSON + un code de statut.</td></tr>
+  </table>
+
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Un bon nommage d'URL est un nom, pas un verbe</h4>
+      <p>On écrit <code class="inl">GET /api/geo/regions</code> (la ressource « régions »), pas <code class="inl">/getRegions</code>. Le verbe est déjà porté par la méthode <code class="inl">GET</code>. C'est une convention REST qui rend l'API lisible.</p>
+    </div>
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Ton API est RESTful : des URL qui nomment des ressources (<code class="inl">/api/kpis/overview</code>, <code class="inl">/api/competences/repartition</code>), tout en <code class="inl">GET</code> pour la lecture, des réponses en JSON. C'est ce qui la rend simple à parcourir et à documenter.</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 9 ============ -->
+<section class="chapter" id="c9">
+  <span class="chapter-tag">Chapitre 9</span>
+  <h2 class="ch-title">Endpoints et paramètres</h2>
+  <p>Un <span class="keyword">endpoint</span> (« point de terminaison ») est une URL précise que l'API sait traiter. C'est un « plat » du menu. Ton API en expose une dizaine, regroupés par thème.</p>
+
+  <h3>Les query parameters : préciser la demande</h3>
+  <p>Après le <code class="inl">?</code> dans une URL, on ajoute des <span class="keyword">query parameters</span> — des précisions optionnelles. Ils s'écrivent <code class="inl">clé=valeur</code>, séparés par <code class="inl">&amp;</code> :</p>
+  <pre>/api/geo/regions<span class="k">?</span>metier=Data+Engineer<span class="k">&amp;</span>type_contrat=CDI</pre>
+  <p>Ici on demande les offres par région, mais uniquement pour le métier Data Engineer <em>et</em> en CDI. Ce sont tes <strong>filtres</strong>.</p>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Tu as fait un choix élégant : <strong>tous</strong> tes endpoints acceptent le même jeu de filtres (région, métier, contrat, période…). Résultat : la barre latérale du dashboard pilote toutes les pages de la même façon. Voici le menu complet de ton API :</p>
+  </div>
+  <table>
+    <tr class="zebra"><th>Endpoint</th><th>Ce qu'il renvoie</th></tr>
+    <tr class="zebra"><td><code class="inl">/api/kpis/overview</code></td><td>Les chiffres clés (un objet)</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/geo/regions</code></td><td>Offres par région (liste)</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/geo/departements</code></td><td>Offres par département</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/metiers/repartition</code></td><td>Top métiers</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/metiers/evolution</code></td><td>Évolution mensuelle</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/competences/repartition</code></td><td>Top compétences</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/secteurs/repartition</code></td><td>Offres par secteur</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/contrats/repartition</code></td><td>Offres par type de contrat</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/profil/repartition</code></td><td>Formation + expérience</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/insights/tension-metiers</code></td><td>Tension du marché (RH)</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/insights/salaires-metiers</code></td><td>Fourchettes salariales</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/insights/comparaison-plateformes</code></td><td>France Travail vs WTTJ</td></tr>
+    <tr class="zebra"><td><code class="inl">/api/offres</code></td><td>Liste détaillée paginée</td></tr>
+  </table>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 10 ============ -->
+<section class="chapter" id="c10">
+  <span class="chapter-tag">Chapitre 10</span>
+  <h2 class="ch-title">FastAPI : l'outil qui construit l'API</h2>
+  <p>Tout ce qu'on a vu, il faut un outil pour le mettre en œuvre en Python. Ton projet utilise <span class="keyword">FastAPI</span> : un <em>framework</em> (une boîte à outils) moderne pour construire des API. On lui a préféré ses concurrents pour trois raisons : il est rapide, il valide les données automatiquement, et il génère sa propre documentation.</p>
+
+  <h3>Un endpoint FastAPI, décortiqué</h3>
+  <p>Voici un vrai endpoint de ton projet, ligne par ligne :</p>
+  <pre><span class="k">@router.get(</span><span class="s">"/overview"</span>, response_model=KpiOverview<span class="k">)</span>
+def read_kpi_overview(filters: FilterParams = Depends(get_filters)):
+    <span class="k">return</span> kpis_service.get_kpi_overview(filters)</pre>
+
+  <table>
+    <tr class="zebra"><th>Bout de code</th><th>Traduction</th></tr>
+    <tr class="zebra"><td><code class="inl">@router.get("/overview")</code></td><td>« Quand on reçoit un GET sur cette URL, exécute la fonction dessous. »</td></tr>
+    <tr class="zebra"><td><code class="inl">response_model=KpiOverview</code></td><td>« La réponse aura obligatoirement cette forme. » (voir chap. 11)</td></tr>
+    <tr class="zebra"><td><code class="inl">Depends(get_filters)</code></td><td>« Récupère d'abord les filtres de l'URL, puis passe-les à la fonction. »</td></tr>
+    <tr class="zebra"><td><code class="inl">return ...service...</code></td><td>« Délègue le vrai travail (le SQL) à la couche service. »</td></tr>
+  </table>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>La documentation gratuite</h4>
+      <p>En lançant ton API, ouvre <code class="inl">http://localhost:8000/docs</code>. FastAPI y génère <strong>tout seul</strong> une page interactive listant tes endpoints, leurs paramètres, et permettant de les tester en direct. Tu n'as rien écrit pour ça — c'est un cadeau du framework, et l'outil idéal pour ta soutenance.</p>
+    </div>
+  </div>
+
+  <h3>Le rôle de <code class="inl">Depends</code> : ne pas se répéter</h3>
+  <p>Tes 13 endpoints acceptent les mêmes filtres. Plutôt que de recopier 13 fois la liste des paramètres, tu l'as définie une seule fois dans <code class="inl">get_filters</code>, et chaque endpoint la « réclame » via <code class="inl">Depends()</code>. FastAPI se charge de lire l'URL et de fabriquer l'objet <code class="inl">FilterParams</code> avant d'appeler ta fonction. C'est le principe d'<strong>injection de dépendance</strong> : la fonction déclare ce dont elle a besoin, le framework le fournit.</p>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 11 ============ -->
+<section class="chapter" id="c11">
+  <span class="chapter-tag">Chapitre 11</span>
+  <h2 class="ch-title">Pydantic : garantir la forme des données</h2>
+  <p><span class="keyword">Pydantic</span> est la bibliothèque qui, dans FastAPI, décrit et vérifie la forme des données. On définit une classe qui liste les champs attendus et leur type ; Pydantic garantit ensuite que rien d'autre ne passe.</p>
+
+  <pre><span class="c"># schemas/kpis.py — le contrat de la réponse "chiffres clés"</span>
+class KpiOverview(BaseModel):
+    nb_offres: int
+    nb_entreprises: int
+    nb_metiers: int
+    salaire_min_moyen: float | None = None</pre>
+
+  <p>Cette classe dit : « une réponse KpiOverview a un <code class="inl">nb_offres</code> qui est un entier, … et un <code class="inl">salaire_min_moyen</code> qui est un décimal <em>ou</em> peut être absent (<code class="inl">None</code>) ». Si le code tentait de renvoyer du texte dans <code class="inl">nb_offres</code>, Pydantic bloquerait immédiatement, côté serveur.</p>
+
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Un contrat qui protège les deux côtés</h4>
+      <p>Le dashboard peut faire <strong>confiance</strong> à la forme de la réponse : elle est garantie. Et si un jour le SQL renvoie une donnée mal typée, l'erreur est attrapée à la source plutôt que de provoquer un bug obscur à l'affichage. C'est un filet de sécurité.</p>
+    </div>
+  </div>
+
+  <div class="project-box">
+    <span class="lbl">◆ Dans ton projet</span>
+    <p>Chaque famille de réponse a son modèle Pydantic : <code class="inl">KpiOverview</code>, <code class="inl">RepartitionItem</code> (pour les listes label/nb_offres), <code class="inl">SalaireMetier</code>… C'est aussi pour ça qu'on a dû gérer le cas où les compétences renvoient <code class="inl">competence</code> au lieu de <code class="inl">label</code> : chaque contrat est distinct, et le dashboard doit lire la bonne clé.</p>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 12 ============ -->
+<section class="chapter" id="c12">
+  <span class="chapter-tag">Chapitre 12</span>
+  <h2 class="ch-title">Tout assembler : la traversée de ton projet</h2>
+  <p class="lead">Tu as maintenant toutes les pièces. Remettons-les dans l'ordre en suivant une action réelle : l'utilisateur ouvre l'espace Chercheur d'emploi et filtre sur « Data Engineer ».</p>
+
+  <table>
+    <tr class="zebra"><th>#</th><th>Étape</th><th>Notion (chapitre)</th></tr>
+    <tr class="zebra"><td>1</td><td>L'utilisateur choisit un métier dans la barre latérale Streamlit</td><td>Client (2)</td></tr>
+    <tr class="zebra"><td>2</td><td>Le dashboard construit l'URL <code class="inl">/api/geo/regions?metier=Data+Engineer</code></td><td>Requête, paramètres (4, 9)</td></tr>
+    <tr class="zebra"><td>3</td><td>Il envoie une requête <code class="inl">GET</code> en HTTP</td><td>HTTP, méthode (3, 5)</td></tr>
+    <tr class="zebra"><td>4</td><td>FastAPI reçoit, lit les filtres via <code class="inl">Depends</code>, les valide</td><td>FastAPI (10)</td></tr>
+    <tr class="zebra"><td>5</td><td>La couche service traduit ça en SQL et interroge BigQuery</td><td>Serveur+client (2)</td></tr>
+    <tr class="zebra"><td>6</td><td>Pydantic met la réponse en forme, FastAPI renvoie du JSON + <code class="inl">200</code></td><td>Pydantic, JSON, statut (11, 7, 6)</td></tr>
+    <tr class="zebra"><td>7</td><td>Le dashboard reçoit le JSON et dessine la carte</td><td>Réponse, JSON (7)</td></tr>
+  </table>
+
+  <p>Chaque notion de ce cours correspond à un maillon réel de ton projet. Tu ne subis plus le code : tu sais <em>pourquoi</em> chaque brique existe.</p>
+
+  <div class="takeaway">
+    <h3>Les 12 notions en une ligne chacune</h3>
+    <ul>
+      <li><strong>API</strong> — un intermédiaire qui laisse deux programmes se parler.</li>
+      <li><strong>Client / serveur</strong> — l'un demande, l'autre répond ; le client initie toujours.</li>
+      <li><strong>HTTP</strong> — la langue commune du web, en requête → réponse.</li>
+      <li><strong>Requête</strong> — méthode + URL + paramètres (+ en-têtes + corps).</li>
+      <li><strong>Méthodes</strong> — GET lit, POST crée, PUT modifie, DELETE supprime.</li>
+      <li><strong>Codes de statut</strong> — 2xx succès, 4xx erreur du client, 5xx erreur du serveur.</li>
+      <li><strong>JSON</strong> — le format texte universel des données échangées.</li>
+      <li><strong>REST</strong> — les conventions qui rendent une API claire et prévisible.</li>
+      <li><strong>Endpoint</strong> — une URL précise que l'API sait traiter.</li>
+      <li><strong>FastAPI</strong> — le framework qui construit l'API (et sa doc auto).</li>
+      <li><strong>Pydantic</strong> — le contrat qui garantit la forme des données.</li>
+      <li><strong>Depends</strong> — l'injection de dépendance, pour ne pas se répéter.</li>
+    </ul>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+<hr class="divider">
+
+<!-- ============ 13 ============ -->
+<section class="chapter" id="c13">
+  <span class="chapter-tag">Chapitre 13</span>
+  <h2 class="ch-title">Visite guidée du dossier <code class="inl">api/</code></h2>
+  <p class="lead">Maintenant que les notions sont en place, ouvrons le capot. Chaque fichier de ton API a un rôle précis, et leur organisation n'est pas arbitraire : elle applique le principe de <strong>séparation des responsabilités</strong> vu au chapitre 10. Voici la carte complète.</p>
+
+  <pre><span class="c"># Arborescence du dossier api/ — l'organisation en couches</span>
+api/
+├── main.py            <span class="c"># le chef d'orchestre : démarre l'appli</span>
+├── dependencies.py     <span class="c"># les filtres partagés par tous les endpoints</span>
+│
+├── core/
+│   └── config.py       <span class="c"># la configuration (projet, dataset…)</span>
+│
+├── db/
+│   └── bigquery.py     <span class="c"># la connexion et l'exécution des requêtes</span>
+│
+├── routes/             <span class="c"># LES URL — quoi répondre, à quelle adresse</span>
+│   ├── kpis.py
+│   ├── geo.py
+│   ├── metiers.py
+│   ├── competences.py
+│   ├── secteurs.py
+│   ├── contrats.py
+│   ├── profil.py
+│   ├── insights.py
+│   └── offres.py
+│
+├── services/           <span class="c"># LA LOGIQUE — construire le SQL, parler à la base</span>
+│   ├── base.py         <span class="c"># les jointures communes (le socle SQL)</span>
+│   ├── kpis.py
+│   ├── geo.py          <span class="c"># … un fichier par domaine, en miroir de routes/</span>
+│   └── …
+│
+└── schemas/            <span class="c"># LES CONTRATS — la forme garantie des réponses</span>
+    ├── common.py       <span class="c"># modèles réutilisés (RepartitionItem…)</span>
+    ├── kpis.py
+    └── …</pre>
+
+  <h3>Le trio qui structure tout : routes / services / schemas</h3>
+  <p>C'est l'idée centrale à retenir. Pour <em>un même domaine</em> (les métiers, la géo…), le travail est réparti en trois fichiers portant le même nom, dans trois dossiers différents :</p>
+
+  <table>
+    <tr class="zebra"><th>Dossier</th><th>Répond à la question</th><th>Contient</th></tr>
+    <tr class="zebra"><td><code class="inl">routes/</code></td><td><em>À quelle URL, et quels paramètres ?</em></td><td>Les endpoints. Aucune logique métier.</td></tr>
+    <tr class="zebra"><td><code class="inl">services/</code></td><td><em>Comment obtenir la donnée ?</em></td><td>La construction du SQL, l'appel à BigQuery.</td></tr>
+    <tr class="zebra"><td><code class="inl">schemas/</code></td><td><em>Quelle forme aura la réponse ?</em></td><td>Les modèles Pydantic.</td></tr>
+  </table>
+
+  <div class="analogy">
+    <span class="lbl">L'image</span>
+    <strong>La brigade de cuisine.</strong> <code class="inl">routes/</code> est le serveur qui prend la commande, <code class="inl">services/</code> est le cuisinier qui la prépare, <code class="inl">schemas/</code> est le dressage imposé de l'assiette. Chacun son poste — si le cuisinier change sa recette, le serveur n'a rien à changer.
+  </div>
+
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Pourquoi un fichier par domaine plutôt qu'un seul gros fichier ?</h4>
+      <p>Parce qu'on s'y retrouve. Pour modifier les compétences, tu ouvres <code class="inl">routes/competences.py</code> et <code class="inl">services/competences.py</code> — tu sais exactement où chercher. Un fichier unique de 1000 lignes serait un cauchemar à maintenir et impossible à travailler à plusieurs.</p>
+    </div>
+  </div>
+
+  <h3>Les fichiers « transversaux »</h3>
+  <p>Quatre fichiers ne concernent pas un domaine précis mais servent tout le monde :</p>
+
+  <table>
+    <tr class="zebra"><th>Fichier</th><th>Rôle détaillé</th></tr>
+    <tr class="zebra">
+      <td><code class="inl">main.py</code></td>
+      <td>Le point d'entrée. Il crée l'application FastAPI, y branche tous les <code class="inl">routers</code> (les fichiers de <code class="inl">routes/</code>), configure les autorisations d'accès (CORS pour que Streamlit puisse l'appeler) et gère les erreurs globales (la panne BigQuery → 503). C'est le fichier qu'<code class="inl">uvicorn</code> lance.</td>
+    </tr>
+    <tr class="zebra">
+      <td><code class="inl">dependencies.py</code></td>
+      <td>Définit <code class="inl">FilterParams</code> et <code class="inl">get_filters</code> : le jeu de filtres commun injecté partout via <code class="inl">Depends</code> (chap. 10). Contient aussi la logique qui transforme un filtre en condition SQL paramétrée sécurisée.</td>
+    </tr>
+    <tr class="zebra">
+      <td><code class="inl">core/config.py</code></td>
+      <td>Lit la configuration depuis le <code class="inl">.env</code> (<code class="inl">BQ_PROJECT_ID</code>, <code class="inl">BQ_DATASET</code>). Aucun secret en dur. C'est ici qu'on résolvait ton erreur de démarrage.</td>
+    </tr>
+    <tr class="zebra">
+      <td><code class="inl">db/bigquery.py</code></td>
+      <td>Crée le client BigQuery (une seule fois, partagé) et expose <code class="inl">run_query()</code> : la fonction unique par laquelle passent toutes les requêtes SQL, avec la gestion d'erreurs centralisée.</td>
+    </tr>
+  </table>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>Et les <code class="inl">__init__.py</code> vides ?</h4>
+      <p>Ces petits fichiers (souvent vides) signalent simplement à Python que le dossier est un « package » importable. C'est ce qui permet d'écrire <code class="inl">from api.services import geo</code>. Purement technique, rien à comprendre de plus.</p>
+    </div>
+  </div>
+
+  <h3>Le cas de <code class="inl">services/base.py</code></h3>
+  <p>Un fichier de service à part : il ne traite aucun domaine, il fournit le <strong>socle SQL commun</strong>. Comme presque toutes tes requêtes joignent <code class="inl">fact_offres</code> à ses dimensions (métier, région, date…), cette jointure est écrite une seule fois ici et réutilisée par tous les autres services. Éviter la répétition, encore.</p>
+
+  <div class="project-box">
+    <span class="lbl">◆ Le trajet d'un fichier à l'autre</span>
+    <p>Reprenons l'appel <code class="inl">/api/geo/regions</code>. Il traverse tes fichiers dans cet ordre précis :</p>
+    <pre style="margin-top:8px"><span class="c"># 1</span> main.py          <span class="c"># a branché le router "geo" au démarrage</span>
+<span class="c"># 2</span> routes/geo.py     <span class="c"># reçoit l'URL + Depends(get_filters)</span>
+<span class="c"># 3</span> dependencies.py   <span class="c"># fournit les filtres validés</span>
+<span class="c"># 4</span> services/geo.py   <span class="c"># construit le SQL…</span>
+<span class="c"># 5</span> services/base.py  <span class="c"># …avec les jointures communes</span>
+<span class="c"># 6</span> db/bigquery.py    <span class="c"># exécute contre BigQuery</span>
+<span class="c"># 7</span> schemas/common.py <span class="c"># valide la forme (RepartitionItem)</span>
+<span class="c">    ↩ la réponse JSON repart vers Streamlit</span></pre>
+  </div>
+
+  <div class="takeaway">
+    <h3>À retenir sur l'organisation</h3>
+    <ul>
+      <li><strong>routes / services / schemas</strong> — le même domaine réparti en 3 rôles : URL, logique, forme.</li>
+      <li><strong>Un fichier par domaine</strong> — on sait toujours où chercher ; travail à plusieurs facilité.</li>
+      <li><strong>main.py</strong> — le chef d'orchestre qui assemble tout au démarrage.</li>
+      <li><strong>dependencies / config / bigquery</strong> — les briques transversales partagées.</li>
+      <li><strong>base.py</strong> — le socle SQL commun, écrit une fois, réutilisé partout.</li>
+    </ul>
+  </div>
+  <div class="backtop"><a href="#top">↑ haut</a></div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">Cours « Les API de A à Z » — illustré par le projet Job Market. À relire sans modération avant la soutenance.</div>
+</footer>
+
+</body>
+</html>
