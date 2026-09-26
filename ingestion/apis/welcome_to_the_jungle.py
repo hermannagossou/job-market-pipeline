@@ -15,6 +15,7 @@ ALGOLIA_APP_ID = os.getenv("WTTJ_ALGOLIA_APP_ID")
 ALGOLIA_API_KEY = os.getenv("WTTJ_ALGOLIA_API_KEY")
 ALGOLIA_URL = f"https://{ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/*/queries"
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+REQUEST_TIMEOUT = 30
 
 def make_wttj_api_call(min_ts, max_ts, page):
     # Faire appel à l'API Welcome to the Jungle via Algolia
@@ -46,12 +47,12 @@ def make_wttj_api_call(min_ts, max_ts, page):
     response = requests.post(
         ALGOLIA_URL,
         headers=headers,
-        json=body
+        json=body,
+        timeout=REQUEST_TIMEOUT,
     )
 
     if not response.ok:
-        logger.warning(f"Erreur API [{response.status_code}] sur page {page}: {response.text[:200]}")
-        return None
+        raise RuntimeError(f"Erreur API [{response.status_code}] sur page {page}: {response.text[:200]}")
 
     return response.json()["results"][0]
 
@@ -88,7 +89,7 @@ def upload_to_gcs(bucket_name, data, target_date):
 
     if not data:
         logger.info("Aucune offre à uploader")
-        return
+        return None
 
     # Définir le nom du fichier à uploader
     date_str = target_date.strftime("%Y-%m-%d")
@@ -124,6 +125,8 @@ def upload_to_gcs(bucket_name, data, target_date):
     )
 
     logger.info(f"{len(data)} offres uploadées vers gs://{bucket_name}/{blob_name}")
+
+    return f"gs://{bucket_name}/{blob_name}"
 
 def run():
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
