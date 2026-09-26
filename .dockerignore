@@ -1,0 +1,18 @@
+astro
+.git
+.env
+airflow_settings.yaml
+logs/
+.venv
+airflow.db
+airflow.cfg
+
+# Ne jamais embarquer de secrets ni de fichiers volumineux inutiles dans l'image
+credentials.json
+job-market-venv/
+streamlit-app/
+.claude/
+.agents/
+**/target/
+**/dbt_packages/
+**/__pycache__/

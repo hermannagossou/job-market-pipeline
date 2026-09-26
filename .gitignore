@@ -48,3 +48,5 @@ job-market-venv/
 
 # Claude
 .claude/
+# Astro
+.astro/

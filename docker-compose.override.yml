@@ -1,0 +1,24 @@
+# Surcharges locales pour `astro dev start`.
+# Le fichier credentials.json (hors image) est monté en lecture seule, et le chemin du .env
+# (chemin de ta machine) est remplacé par le chemin dans le conteneur.
+services:
+  scheduler:
+    volumes:
+      - ./credentials.json:/usr/local/airflow/include/credentials.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /usr/local/airflow/include/credentials.json
+  api-server:
+    volumes:
+      - ./credentials.json:/usr/local/airflow/include/credentials.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /usr/local/airflow/include/credentials.json
+  dag-processor:
+    volumes:
+      - ./credentials.json:/usr/local/airflow/include/credentials.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /usr/local/airflow/include/credentials.json
+  triggerer:
+    volumes:
+      - ./credentials.json:/usr/local/airflow/include/credentials.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /usr/local/airflow/include/credentials.json
