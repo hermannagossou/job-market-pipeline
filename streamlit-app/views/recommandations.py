@@ -8,56 +8,56 @@ depuis la vue "Mon profil" après soumission réussie du formulaire (bouton
 tard dans la même session.
 
 Lit l'id_client depuis st.session_state (rempli par la vue "Mon profil" à la
-soumission) — rien n'est recalculé pour un autre client que celui qui vient
-de s'inscrire dans cette session.
+soumission) ; profil et recommandations viennent de l'API (api_client.py).
 """
 
 import streamlit as st
 
-from shared import get_client_profile, get_recommendations
+import api_client
+from api_client import ApiError
 
-st.title("🎯 Tes offres recommandées")
+st.title("Tes offres recommandées")
 
 id_client = st.session_state.get("last_client_id")
 
 if not id_client:
     st.info("Aucun profil trouvé dans cette session — remplis d'abord le formulaire.")
-    st.page_link("views/mon_profil.py", label="Remplir mon profil", icon="📋")
+    st.page_link("views/mon_profil.py", label="Remplir mon profil", icon=":material/assignment:")
     st.stop()
 
 # =============================================================================
 # TON PROFIL — pour vérifier la pertinence des recommandations, et corriger si besoin
 # =============================================================================
 try:
-    profil = get_client_profile(id_client)
-except Exception as e:
+    profil = api_client.get_client_profile(id_client)
+except ApiError as e:
     profil = None
     st.warning(f"Impossible de récupérer ton profil pour l'instant ({e}).")
 
 if profil:
-    with st.expander("👤 Ton profil", expanded=False):
+    with st.expander("Ton profil", icon=":material/person:"):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"**{profil['prenom']} {profil['nom']}**")
             st.caption(profil["email"])
-            st.markdown(f"🎓 {profil['formation_label']}")
-            st.markdown(f"💼 {profil['experience_label']}")
-            st.markdown(f"📄 {profil['contrat_label']}")
+            st.markdown(f":material/school: {profil['formation_label']}")
+            st.markdown(f":material/work_history: {profil['experience_label']}")
+            st.markdown(f":material/description: {profil['contrat_label']}")
         with col2:
-            st.markdown(f"💰 {profil['salaire_min']:.0f}€ - {profil['salaire_max']:.0f}€")
+            st.markdown(f":material/euro: {profil['salaire_min']:.0f}€ - {profil['salaire_max']:.0f}€")
             st.caption(f"Profil soumis le {profil['date_soumission']}")
-            st.caption("📎 CV enregistré" if profil.get("cv_storage_path") else "Pas de CV enregistré")
+            st.caption("CV enregistré" if profil.get("cv_storage_path") else "Pas de CV enregistré")
 
         st.divider()
-        st.markdown("**🛠️ Compétences**")
+        st.markdown("**Compétences**")
         st.write(", ".join(c["label"] for c in profil["competences"]) or "Aucune")
-        st.markdown("**🎯 Métier(s) recherché(s)**")
+        st.markdown("**Métier(s) recherché(s)**")
         st.write(", ".join(m["label"] for m in profil["metiers"]) or "Aucun")
-        st.markdown("**📍 Ville(s) recherchée(s)**")
+        st.markdown("**Ville(s) recherchée(s)**")
         st.write(", ".join(l["label"] for l in profil["localisations"]) or "Aucune")
 
         st.divider()
-        if st.button("✏️ Modifier mon profil", use_container_width=True):
+        if st.button("Modifier mon profil", icon=":material/edit:", width="stretch"):
             st.session_state["profile_prefill"] = profil
             st.switch_page("views/mon_profil.py")
 
@@ -69,9 +69,9 @@ st.divider()
 
 try:
     with st.spinner("Calcul de tes recommandations..."):
-        recommendations = get_recommendations(id_client)
-except Exception as e:
-    st.error(f"Impossible de calculer tes recommandations pour l'instant ({e}).")
+        recommendations = api_client.get_recommendations(id_client)
+except ApiError as e:
+    st.error(f"Impossible de calculer tes recommandations pour l'instant ({e}).", icon=":material/error:")
     st.stop()
 
 if not recommendations:
@@ -87,13 +87,13 @@ else:
                     f"{offre['entreprise'] or 'Entreprise non renseignée'}"
                 )
                 st.caption(
-                    f"📍 {offre['ville'] or 'Ville non renseignée'} · "
-                    f"💰 {offre['offre_salaire_min']:.0f}€ - {offre['offre_salaire_max']:.0f}€"
+                    f":material/location_on: {offre['ville'] or 'Ville non renseignée'} · "
+                    f":material/euro: {offre['offre_salaire_min']:.0f}€ - {offre['offre_salaire_max']:.0f}€"
                 )
                 if offre.get("lien_offre"):
-                    st.link_button("🔗 Voir l'offre", offre["lien_offre"])
+                    st.link_button("Voir l'offre", offre["lien_offre"], icon=":material/open_in_new:")
             with col_b:
                 st.metric("Score", f"{offre['score_final']*100:.0f}%")
 
 st.divider()
-st.page_link("views/mon_profil.py", label="Remplir un nouveau profil", icon="📋")
+st.page_link("views/mon_profil.py", label="Remplir un nouveau profil", icon=":material/assignment:")

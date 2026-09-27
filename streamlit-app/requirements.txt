@@ -1,14 +1,7 @@
 # Dépendances de l'app Streamlit uniquement — séparées du requirements.txt racine,
 # qui est installé dans l'image Astro (streamlit-app/ est exclu via .dockerignore).
+# L'app ne parle qu'à l'API (api_client.py) : aucune bibliothèque Google Cloud ici.
 # Lancer depuis streamlit-app/ : pip install -r requirements.txt && streamlit run app.py
 
-# Google Cloud
-google-cloud-storage==3.13.1
-google-cloud-bigquery==3.43.0
-google-cloud-aiplatform==1.163.0
-
-# Streamlit
 streamlit==1.61.1
-
-# Extraction texte des CV
-pdfplumber==0.11.10
+requests==2.33.1
