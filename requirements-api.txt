@@ -3,3 +3,9 @@ uvicorn[standard]==0.34.0
 google-cloud-bigquery==3.27.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
+
+# Recommandation : analyse de CV (Gemini/Vertex AI), dépôt des CV sur GCS
+google-cloud-aiplatform==1.163.0
+google-cloud-storage==3.13.1
+pdfplumber==0.11.10
+python-multipart==0.0.32

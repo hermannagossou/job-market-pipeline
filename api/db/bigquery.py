@@ -32,13 +32,14 @@ def get_client() -> bigquery.Client:
 
 def run_query(
     sql: str,
-    params: list[bigquery.ScalarQueryParameter] | None = None,
+    params: list[bigquery.ScalarQueryParameter | bigquery.ArrayQueryParameter] | None = None,
 ) -> list[dict]:
     """Exécute une requête paramétrée et retourne les lignes sous forme de liste de dicts.
 
     Args:
         sql: requête SQL, avec des placeholders `@nom_param` pour toute valeur variable.
-        params: liste de `bigquery.ScalarQueryParameter` correspondant aux placeholders.
+        params: liste de `bigquery.ScalarQueryParameter` (ou `ArrayQueryParameter`,
+            pour un `UNNEST(@liste)`) correspondant aux placeholders.
 
     Raises:
         BigQueryQueryError: si la requête échoue pour quelque raison que ce soit.

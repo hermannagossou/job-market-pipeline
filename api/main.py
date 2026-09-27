@@ -11,7 +11,20 @@ from fastapi.responses import JSONResponse
 
 from api.core.config import get_settings
 from api.db.bigquery import BigQueryQueryError
-from api.routes import competences, contrats, geo, insights, kpis, metiers, offres, profil, secteurs
+from api.routes import (
+    clients,
+    competences,
+    contrats,
+    cv,
+    geo,
+    insights,
+    kpis,
+    metiers,
+    offres,
+    profil,
+    referentiels,
+    secteurs,
+)
 
 settings = get_settings()
 
@@ -20,7 +33,7 @@ app = FastAPI(title=settings.api_title, version=settings.api_version)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 
@@ -49,6 +62,11 @@ app.include_router(contrats.router)
 app.include_router(profil.router)
 app.include_router(offres.router)
 app.include_router(insights.router)
+
+# Recommandation : formulaire client, analyse de CV, profils et offres recommandées
+app.include_router(referentiels.router)
+app.include_router(cv.router)
+app.include_router(clients.router)
 
 
 @app.get("/", tags=["Santé"], summary="Vérifie que l'API est en ligne")

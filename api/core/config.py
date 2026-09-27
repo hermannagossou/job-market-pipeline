@@ -6,7 +6,7 @@ Aucun secret ni identifiant de projet n'est codé en dur : tout passe par un fic
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import AliasChoices, Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Chemin ABSOLU vers le .env attendu à la racine du projet (job_market_project/.env),
@@ -20,9 +20,19 @@ _ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
-    # Projet et dataset BigQuery contenant les modèles marts (fact_offres, dim_*)
-    bq_project_id: str
-    bq_dataset: str
+    # Projet et dataset BigQuery contenant les modèles marts (fact_offres, dim_*).
+    # Acceptent aussi GCP_PROJECT_ID / BIGQUERY_DATASET, les noms déjà utilisés
+    # par Airflow dans le .env racine — une seule valeur à maintenir pour les deux.
+    bq_project_id: str = Field(validation_alias=AliasChoices("BQ_PROJECT_ID", "GCP_PROJECT_ID"))
+    bq_dataset: str = Field(validation_alias=AliasChoices("BQ_DATASET", "BIGQUERY_DATASET"))
+
+    # Recommandation : bucket GCS des CV déposés, et modèle Gemini (Vertex AI)
+    # utilisé pour l'extraction structurée des CV. Les modèles en preview ne sont
+    # souvent accessibles que via la location "global", pas une région.
+    cv_bucket_name: str = "job-market-cv-uploads"
+    vertex_location: str = "global"
+    gemini_model: str = "gemini-3.1-flash-lite"
+    max_cv_size_mb: int = 5
 
     # Optionnel : si absent, google-cloud-bigquery utilise les Application Default
     # Credentials (ADC) — pratique en local avec `gcloud auth application-default login`.
