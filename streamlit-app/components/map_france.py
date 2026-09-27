@@ -131,7 +131,7 @@ def choropleth(
     fig.update_geos(fitbounds="locations", visible=False)
     fig = apply_plotly_theme(fig, height=520)
     fig.update_layout(margin=dict(l=0, r=0, t=48, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     if non_matches:
         st.caption(

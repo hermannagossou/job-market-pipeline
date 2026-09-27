@@ -5,7 +5,7 @@ import streamlit as st
 from components import charts
 from components.sidebar import render_sidebar
 from components.theme import ACCENT, PRIMARY, fmt_euro, fmt_int, inject_css, kpi_card, persona_hero
-from services.api_client import (
+from api_client import (
     ApiError,
     get_competences_repartition,
     get_evolution_granulaire,
@@ -80,7 +80,7 @@ with st.expander("Voir le détail chiffré (et la fiabilité des salaires)"):
                 "Part déclarés": (df["part_declares"] * 100).round(0).astype("Int64").astype(str) + " %",
             }
         )[["Métier", "Min moyen", "Max moyen", "Offres", "Part déclarés"]]
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        st.dataframe(df_display, width="stretch", hide_index=True)
     else:
         st.info("Aucune donnée salariale pour les filtres actuels.")
 

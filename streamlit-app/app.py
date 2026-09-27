@@ -1,25 +1,35 @@
 """
 Job Market — Point d'entrée
 ============================
-Point d'entrée unique et fixe (streamlit run app.py, ne change plus jamais).
-Déclare la navigation et les titres de menu explicitement via
-st.navigation()/st.Page() — indépendants des noms de fichiers, contrairement
-à l'ancien système multipage automatique (dossier pages/, où le libellé du
-script racine dans le menu était dérivé de son nom de fichier : "app").
+Point d'entrée unique et fixe (streamlit run app.py). Déclare la navigation
+via st.navigation()/st.Page(), en deux sections :
 
-Le contenu réel des deux pages vit dans views/ (mon_profil.py,
-recommandations.py) — jamais dans ce fichier, qui ne fait que router.
+- Observatoire : analyse du marché de l'emploi Data (views/observatoire/)
+- Recommandation : profil candidat et offres recommandées (views/)
 
 Aucune logique métier ni accès aux données ici : les vues passent toutes par
 l'API FastAPI (api_client.py) — l'app n'a besoin d'aucun identifiant GCP.
+Chaque page fixe sa propre mise en page et son titre d'onglet
+(st.set_page_config, appels additifs).
 """
 
 import streamlit as st
 
-st.set_page_config(page_title="Job Market", page_icon=":material/explore:", layout="centered")
+st.set_page_config(page_title="Job Market", page_icon=":material/explore:")
 
-mon_profil = st.Page("views/mon_profil.py", title="Mon profil", icon=":material/person:", default=True)
-recommandations = st.Page("views/recommandations.py", title="Recommandations", icon=":material/target:")
-
-pg = st.navigation([mon_profil, recommandations])
+pg = st.navigation(
+    {
+        "Observatoire": [
+            st.Page("views/observatoire/accueil.py", title="Vue d'ensemble", icon=":material/insights:", default=True),
+            st.Page("views/observatoire/chercheur_emploi.py", title="Chercheur d'emploi", icon=":material/person_search:"),
+            st.Page("views/observatoire/rh_recruteur.py", title="RH / Recruteur", icon=":material/badge:"),
+            st.Page("views/observatoire/analyste_marche.py", title="Analyste marché", icon=":material/monitoring:"),
+            st.Page("views/observatoire/analyse_geographique.py", title="Analyse géographique", icon=":material/map:"),
+        ],
+        "Recommandation": [
+            st.Page("views/mon_profil.py", title="Mon profil", icon=":material/person:"),
+            st.Page("views/recommandations.py", title="Mes recommandations", icon=":material/target:"),
+        ],
+    }
+)
 pg.run()

@@ -50,3 +50,6 @@ job-market-venv/
 .claude/
 # Astro
 .astro/
+
+# Fonds de carte de l'observatoire (régénérables via streamlit-app/scripts/download_geojson.py)
+streamlit-app/assets/*.geojson

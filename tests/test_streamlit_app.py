@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 APP_DIR = Path(__file__).resolve().parent.parent / "streamlit-app"
@@ -148,3 +149,22 @@ def test_recherche_email_api_indisponible(api, monkeypatch):
     next(b for b in at.button if b.label == "Me connecter").click().run()
     assert any("Recherche indisponible" in e.value for e in at.error)
     assert not at.warning  # pas de "aucun profil trouvé" trompeur en plus de l'erreur
+
+
+@pytest.mark.parametrize(
+    "page",
+    ["accueil", "chercheur_emploi", "rh_recruteur", "analyste_marche", "analyse_geographique"],
+)
+def test_observatoire_api_injoignable(monkeypatch, page):
+    """Chaque page de l'observatoire s'affiche avec un message d'erreur, sans
+    planter, quand l'API ne répond pas."""
+
+    def ko(*args, **kwargs):
+        raise api_client.ApiError("Impossible de joindre l'API")
+
+    monkeypatch.setattr(api_client, "_request", ko)
+    st.cache_data.clear()  # sinon une réponse mise en cache par un autre test masquerait la panne
+    at = AppTest.from_file(str(APP_DIR / "app.py"), default_timeout=10)
+    at.switch_page(f"views/observatoire/{page}.py").run()
+    assert not at.exception
+    assert at.error

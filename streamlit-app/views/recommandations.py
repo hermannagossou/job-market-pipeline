@@ -16,6 +16,8 @@ import streamlit as st
 import api_client
 from api_client import ApiError
 
+st.set_page_config(page_title="Mes recommandations — Job Market", layout="centered")
+
 st.title("Tes offres recommandées")
 
 id_client = st.session_state.get("last_client_id")

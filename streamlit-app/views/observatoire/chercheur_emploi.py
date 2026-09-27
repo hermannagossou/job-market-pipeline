@@ -5,7 +5,7 @@ from components import charts
 from components.map_france import choropleth
 from components.sidebar import render_sidebar
 from components.theme import ACCENT, PRIMARY, SUCCESS, fmt_euro, fmt_int, inject_css, kpi_card, persona_hero
-from services.api_client import (
+from api_client import (
     ApiError,
     get_competences_repartition,
     get_contrats_repartition,

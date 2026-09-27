@@ -12,6 +12,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Fonds de carte GeoJSON (régions, départements) téléchargés au build : image
+# autonome, sans accès réseau à l'exécution. Le script ignore les fichiers déjà
+# présents. En cas d'échec, les cartes se replient sur des graphiques en barres.
+RUN python scripts/download_geojson.py || \
+    echo "Avertissement : téléchargement GeoJSON échoué, cartes remplacées par des barres."
+
 RUN useradd --create-home --uid 1000 app
 USER app
 

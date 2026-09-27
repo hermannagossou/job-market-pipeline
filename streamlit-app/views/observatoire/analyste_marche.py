@@ -4,7 +4,7 @@ import streamlit as st
 from components import charts
 from components.sidebar import render_sidebar
 from components.theme import PRIMARY, fmt_int, inject_css, kpi_card, persona_hero
-from services.api_client import (
+from api_client import (
     ApiError,
     get_comparaison_plateformes,
     get_competences_repartition,

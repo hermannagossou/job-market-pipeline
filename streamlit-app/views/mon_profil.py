@@ -16,6 +16,10 @@ from api_client import ApiError
 
 MAX_CV_SIZE_MB = 5
 
+# Appels additifs : chaque page fixe sa mise en page (large pour l'observatoire,
+# centrée pour le formulaire) et son titre d'onglet.
+st.set_page_config(page_title="Mon profil — Job Market", layout="centered")
+
 st.title("Créer mon profil candidat")
 st.caption("Dépose ton CV pour un pré-remplissage automatique, puis complète et vérifie avant de valider.")
 

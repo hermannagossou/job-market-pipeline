@@ -5,3 +5,7 @@
 
 streamlit==1.61.1
 requests==2.33.1
+
+# Observatoire : graphiques et cartes choroplèthes
+pandas==3.0.2
+plotly==7.1.0

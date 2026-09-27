@@ -1,8 +1,8 @@
 """Télécharge une fois pour toutes les fonds de carte GeoJSON (régions et
-départements français) et les stocke dans streamlit/assets/.
+départements français) et les stocke dans streamlit-app/assets/.
 
 À lancer UNE SEULE FOIS après le clone du projet :
-    python streamlit/scripts/download_geojson.py
+    python streamlit-app/scripts/download_geojson.py
 
 Les fichiers produits sont ensuite versionnés (ou conservés localement) et lus
 directement par le dashboard, qui n'a donc plus besoin d'accès réseau à

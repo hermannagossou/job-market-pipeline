@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.api_client import ApiError, get_contrats_repartition, get_departements, get_metiers_repartition, get_profil_repartition, get_regions, get_secteurs_repartition
+from api_client import ApiError, get_contrats_repartition, get_departements, get_metiers_repartition, get_profil_repartition, get_regions, get_secteurs_repartition
 
 
 def _safe_labels(fetch_fn, *args, **kwargs) -> list[str]:
@@ -26,7 +26,7 @@ def _safe_labels(fetch_fn, *args, **kwargs) -> list[str]:
 def render_sidebar() -> dict:
     """Affiche les filtres dans la sidebar et retourne un dict des filtres actifs
     (clés absentes ou None si "Tous" est sélectionné, prêt à être passé tel
-    quel aux fonctions de `services.api_client`)."""
+    quel aux fonctions de `api_client`)."""
     st.sidebar.header("Filtres")
 
     api_unreachable = False

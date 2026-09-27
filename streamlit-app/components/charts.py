@@ -34,7 +34,7 @@ def bar(items: list[dict], title: str, label_key: str = "label", horizontal: boo
         df = df.sort_values("nb_offres", ascending=False)
         fig = px.bar(df, x=label_key, y="nb_offres", title=title)
     fig.update_traces(marker_color=color)
-    st.plotly_chart(apply_plotly_theme(fig), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig), width="stretch")
 
 
 def donut(items: list[dict], title: str, label_key: str = "label", top_n: int | None = None) -> None:
@@ -46,7 +46,7 @@ def donut(items: list[dict], title: str, label_key: str = "label", top_n: int | 
         df = df.nlargest(top_n, "nb_offres")
     fig = px.pie(df, names=label_key, values="nb_offres", hole=0.55, title=title, color_discrete_sequence=COLOR_SEQUENCE)
     fig.update_traces(textposition="inside", textinfo="percent")
-    st.plotly_chart(apply_plotly_theme(fig), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig), width="stretch")
 
 
 def evolution(points: list[dict], title: str, color: str = PRIMARY) -> None:
@@ -60,7 +60,7 @@ def evolution(points: list[dict], title: str, color: str = PRIMARY) -> None:
     fig.update_traces(line_color=color, fillcolor="rgba(37,99,235,0.12)")
     fig.update_xaxes(title=None)
     fig.update_yaxes(title="Offres")
-    st.plotly_chart(apply_plotly_theme(fig, height=360), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=360), width="stretch")
 
 
 def salaire_range(items: list[dict], title: str) -> None:
@@ -102,7 +102,7 @@ def salaire_range(items: list[dict], title: str) -> None:
         )
     )
     fig.update_layout(title=title, xaxis_title="Salaire annuel brut (€)")
-    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 34 * len(df))), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 34 * len(df))), width="stretch")
 
 
 def tension_scatter(items: list[dict], title: str) -> None:
@@ -122,7 +122,7 @@ def tension_scatter(items: list[dict], title: str) -> None:
     fig.update_traces(textposition="top center", textfont_size=10)
     fig.update_layout(xaxis_title="Nombre d'entreprises", yaxis_title="Nombre d'offres",
                       coloraxis_colorbar_title="Offres/entreprise")
-    st.plotly_chart(apply_plotly_theme(fig, height=460), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=460), width="stretch")
 
 
 def grouped_platform_bar(items: list[dict], title: str) -> None:
@@ -139,7 +139,7 @@ def grouped_platform_bar(items: list[dict], title: str) -> None:
     fig.add_trace(go.Bar(y=df["label"], x=df["wttj"], name="Welcome to the Jungle",
                          orientation="h", marker_color=PLATFORM_COLORS["wttj"]))
     fig.update_layout(barmode="group", title=title, xaxis_title="Offres")
-    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), width="stretch")
 
 
 def horizontal_stacked_platform(items: list[dict], title: str) -> None:
@@ -159,7 +159,7 @@ def horizontal_stacked_platform(items: list[dict], title: str) -> None:
     fig.add_trace(go.Bar(y=df["label"], x=df["pct_wttj"], name="Welcome to the Jungle",
                          orientation="h", marker_color=PLATFORM_COLORS["wttj"]))
     fig.update_layout(barmode="stack", title=title, xaxis_title="Part (%)")
-    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), width="stretch")
 
 
 def salaire_bar(items, title, label_key="label", top_n=None):
@@ -193,7 +193,7 @@ def salaire_bar(items, title, label_key="label", top_n=None):
             hovertemplate="%{y}<br>Médian : %{x:,.0f} €<extra></extra>",
         ))
     fig.update_layout(barmode="group", title=title, xaxis_title="Salaire annuel brut (€)")
-    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=max(360, 30 * len(df))), width="stretch")
 
 
 def evolution_periode(points, title, color=PRIMARY):
@@ -209,4 +209,4 @@ def evolution_periode(points, title, color=PRIMARY):
     fig.update_traces(line_color=color, fillcolor="rgba(37,99,235,0.12)")
     fig.update_xaxes(title=None)
     fig.update_yaxes(title="Offres")
-    st.plotly_chart(apply_plotly_theme(fig, height=380), use_container_width=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=380), width="stretch")

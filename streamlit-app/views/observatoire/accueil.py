@@ -4,7 +4,7 @@ import streamlit as st
 from components import charts
 from components.map_france import choropleth
 from components.theme import ACCENT, PRIMARY, fmt_euro, fmt_int, inject_css, kpi_card
-from services.api_client import (
+from api_client import (
     ApiError,
     get_competences_repartition,
     get_kpi_overview,
@@ -107,7 +107,7 @@ with tab_ent:
         df_ent = pd.DataFrame(top_ent)[["label", "entreprise", "nb_offres"]]
         df_ent.columns = ["Département", "Entreprise n°1", "Offres"]
         with st.expander("Voir le détail par département"):
-            st.dataframe(df_ent, use_container_width=True, hide_index=True)
+            st.dataframe(df_ent, width="stretch", hide_index=True)
 
 with tab_sec:
     st.caption("Les secteurs d'activité qui concentrent le plus d'offres.")
@@ -163,3 +163,11 @@ with col3:
     )
 
 st.info("Sélectionnez un espace dans le menu de gauche pour commencer.", icon="💡")
+
+st.divider()
+st.subheader("Et pour vous ?")
+st.markdown(
+    "Déposez votre CV ou remplissez votre profil : nous vous proposons les offres "
+    "qui correspondent à vos compétences, votre métier, votre ville et votre salaire."
+)
+st.page_link("views/mon_profil.py", label="Obtenir mes recommandations", icon=":material/target:")

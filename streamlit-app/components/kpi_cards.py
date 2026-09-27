@@ -45,7 +45,7 @@ def render_bar_chart(items: list[dict], title: str, horizontal: bool = True, top
         fig = px.bar(df, x="label", y="nb_offres", title=title)
 
     fig.update_layout(margin=dict(l=10, r=10, t=40, b=10), height=420)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_evolution_chart(points: list[dict], title: str) -> None:
@@ -59,4 +59,4 @@ def render_evolution_chart(points: list[dict], title: str) -> None:
     df = df.sort_values("periode")
     fig = px.line(df, x="periode", y="nb_offres", title=title, markers=True)
     fig.update_layout(margin=dict(l=10, r=10, t=40, b=10), height=380)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
