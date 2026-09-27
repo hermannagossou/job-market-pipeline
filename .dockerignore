@@ -11,6 +11,8 @@ airflow.cfg
 credentials.json
 job-market-venv/
 streamlit-app/
+api/
+compose.app.yml
 .claude/
 .agents/
 **/target/

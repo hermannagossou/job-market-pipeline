@@ -1,0 +1,8 @@
+# Contexte de build : streamlit-app/ uniquement.
+# secrets.toml : ancien mode d'accès direct à BigQuery, ne doit jamais entrer dans l'image.
+.streamlit/secrets.toml
+__pycache__/
+**/__pycache__/
+*.pyc
+Dockerfile
+.dockerignore
