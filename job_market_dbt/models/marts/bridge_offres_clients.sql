@@ -109,7 +109,7 @@ offre_info as (
     where fo.id_offre in (select distinct id_offre from {{ ref('bridge_offres_competences') }})
 ),
 
--- FILTRE DUR (5 critères, métier exclu volontairement) + double flux
+-- FILTRE DUR (6 critères, métier inclus depuis le 23 août) + double flux
 paires_eligibles as (
     select cp.id_client, oi.id_offre, oi.id_metier
     from client_profile cp

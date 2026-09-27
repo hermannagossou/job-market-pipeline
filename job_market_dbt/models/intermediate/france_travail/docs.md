@@ -17,7 +17,7 @@ sont envoyées vers `int_france_travail_ai_nom_metier` pour classification par G
 
 
 {% docs int_france_travail_ai_nom_metier %}
-Classification du métier data via **Gemini Flash** (`dbt_hermann.gemini_flash`) pour les offres
+Classification du métier data via **Gemini Flash** (`prod.gemini_model`) pour les offres
 dont le regex n'a trouvé aucune correspondance (`nom_metier IS NULL`).
 
 - **Incrémental** (`unique_key = id`) : seules les nouvelles offres sont envoyées au LLM.

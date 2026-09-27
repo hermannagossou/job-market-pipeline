@@ -66,7 +66,7 @@ reponses_llm as (
         result as competences_csv,
         nom_plateforme
     from ai.generate_text(
-        model `dbt_hermann.gemini_flash`,
+        model `prod.gemini_model`,
         (
             select
                 concat(

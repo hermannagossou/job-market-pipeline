@@ -9,7 +9,9 @@ sources:
       Déclarées ici comme sources pour garder un lineage dbt correct et
       pouvoir les référencer proprement dans les modèles.
     database: job-market-de-492514
-    schema: dbt_hermann
+    # Suit la cible dbt : dbt_hermann en dev, prod en prod — l'app Streamlit
+    # écrit dans le dataset configuré dans son secrets.toml (bigquery_dataset).
+    schema: "{{ target.schema }}"
     tables:
       - name: dim_clients
         description: Profil client (formulaire + CV), une ligne par client, upsert par email.
