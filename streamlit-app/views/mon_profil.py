@@ -47,6 +47,12 @@ except Exception as e:
     st.error(f"Impossible de charger les référentiels depuis BigQuery : {e}")
     st.stop()
 
+# "Non Renseigné" existe dans ces dimensions pour les offres sans exigence
+# (rang 0, accessibles à tous) — ce n'est pas un niveau qu'un client peut avoir :
+# avec le rang 0, il ne verrait que les offres sans aucune exigence.
+formations = {k: v for k, v in formations.items() if v != "Non Renseigné"}
+experiences = {k: v for k, v in experiences.items() if v != "Non Renseigné"}
+
 if "cv_analysis" not in st.session_state:
     st.session_state.cv_analysis = None
 

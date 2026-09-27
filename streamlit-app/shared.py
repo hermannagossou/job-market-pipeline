@@ -3,8 +3,8 @@ Job Market — Code partagé entre les pages Streamlit
 ======================================================
 Ce module regroupe tout ce qui est commun aux différentes pages de l'app
 (config, connexions mises en cache, extraction/résolution du CV, calcul des
-recommandations) — importé à la fois par app.py (page "Mon profil") et par
-pages/1_Recommandations.py (page "Mes recommandations").
+recommandations) — importé par views/mon_profil.py (page "Mon profil") et par
+views/recommandations.py (page "Mes recommandations"), routées depuis app.py.
 
 Ne pas exécuter ce fichier directement avec `streamlit run` — c'est un module
 d'import, pas une page.
@@ -33,29 +33,17 @@ Insertion BigQuery à la soumission finale :
 --------------------------------------------------------------------------
 PRÉREQUIS — à faire une seule fois, en dehors de cette app (BigQuery / SQL) :
 --------------------------------------------------------------------------
-1. Modèle d'embedding créé :
+1. Modèle d'embedding créé dans le dataset cible :
      CREATE OR REPLACE MODEL `PROJECT.DATASET.embedding_model`
-     REMOTE WITH CONNECTION `US.vertex-ai`
+     REMOTE WITH CONNECTION `US.job-market-conn`
      OPTIONS (ENDPOINT = 'text-multilingual-embedding-002');
 
-2. Embeddings de dim_competences calculés en batch et indexés :
-     CREATE OR REPLACE TABLE `PROJECT.DATASET.dim_competences_embeddings` AS
-     SELECT * FROM ML.GENERATE_EMBEDDING(
-       MODEL `PROJECT.DATASET.embedding_model`,
-       (SELECT id_competence, competence AS content FROM `PROJECT.DATASET.dim_competences`)
-     ) WHERE LENGTH(ml_generate_embedding_status) = 0;
+2. Tables alimentées par cette app créées dans le dataset cible (dim_clients
+   + 3 bridges, cf. source app_streamlit dans _sources_streamlit.yml).
 
-     CREATE OR REPLACE VECTOR INDEX competences_index
-     ON `PROJECT.DATASET.dim_competences_embeddings`(ml_generate_embedding_result)
-     OPTIONS(index_type='IVF', distance_type='COSINE', ivf_options='{"num_lists":10}');
-
-3. Embeddings de dim_metiers calculés en batch (table plus petite, pas
-   besoin d'index vectoriel pour ce volume) :
-     CREATE OR REPLACE TABLE `PROJECT.DATASET.dim_metiers_embeddings` AS
-     SELECT * FROM ML.GENERATE_EMBEDDING(
-       MODEL `PROJECT.DATASET.embedding_model`,
-       (SELECT id_metier, nom AS content FROM `PROJECT.DATASET.dim_metiers`)
-     ) WHERE LENGTH(ml_generate_embedding_status) = 0;
+3. dbt build lancé au moins une fois sur ce dataset : il construit les
+   tables d'embeddings (dim_competences_embeddings, dim_metiers_embeddings,
+   offres_embeddings) et leurs index vectoriels.
 
 Sans ces étapes, la résolution des compétences et du métier extraits du CV
 échouera (avec un message d'erreur explicite affiché dans l'app — le
@@ -609,6 +597,10 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
             FROM competences_client cc
             JOIN `{PROJECT_ID}.{DATASET}.dim_competences` dc ON dc.id_competence = cc.id_competence
         ),
+        -- Aligné sur bridge_offres_clients.sql : même top_k, et normalisation
+        -- min-max calculée sur les seules offres éligibles (jointure ci-dessous),
+        -- pas sur tout le catalogue — sinon le score dépendrait d'offres que le
+        -- client ne verra jamais, et différerait du score persisté.
         score_embedding_raw AS (
             SELECT base.id_offre, distance
             FROM VECTOR_SEARCH(
@@ -621,8 +613,9 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
                         (SELECT content FROM texte_competences_client)
                     )
                 ),
-                top_k => 1000
+                top_k => 5000
             )
+            JOIN offres_eligibles oe ON oe.id_offre = base.id_offre
         ),
         score_embedding_calc AS (
             SELECT
