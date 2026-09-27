@@ -16,8 +16,9 @@ import streamlit as st
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 TIMEOUT = float(os.getenv("API_TIMEOUT_SECONDS", "10"))
-# Analyse de CV (Gemini + 2 embeddings) et recommandations (VECTOR_SEARCH) :
-# plusieurs secondes côté BigQuery/Vertex, bien au-delà du délai par défaut.
+# Analyse de CV (Gemini + 2 embeddings), enregistrement du profil (script DML)
+# et recommandations (VECTOR_SEARCH) : plusieurs secondes côté BigQuery/Vertex,
+# bien au-delà du délai par défaut.
 TIMEOUT_LONG = float(os.getenv("API_TIMEOUT_LONG_SECONDS", "90"))
 
 
@@ -81,8 +82,9 @@ def find_client_by_email(email: str) -> str | None:
 
 
 def upsert_client(profil: dict) -> dict:
-    """Retourne {id_client, est_nouveau}."""
-    return _request("PUT", "/api/clients", json=profil)
+    """Retourne {id_client, est_nouveau}. Délai long : l'upsert est un script
+    BigQuery de 7 instructions (MERGE + 3 × DELETE/INSERT), ~1-2 s chacune."""
+    return _request("PUT", "/api/clients", timeout=TIMEOUT_LONG, json=profil)
 
 
 def upload_cv(id_client: str, cv_bytes: bytes, filename: str) -> str:
