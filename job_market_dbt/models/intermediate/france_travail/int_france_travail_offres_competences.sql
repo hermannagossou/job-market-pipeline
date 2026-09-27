@@ -103,8 +103,10 @@ competences_splittees as (
 
 -- Validation : inner join sur le seed — filtre dur contre les hallucinations résiduelles.
 -- Le skill_name du seed fait autorité ; la casse LLM peut varier d'une lettre, le lower() corrige.
+-- Cette correction de casse peut faire correspondre deux réponses LLM distinctes
+-- (ex. "Data quality" et "Data Quality") au même skill_name : d'où le distinct final.
 competences_validees as (
-    select
+    select distinct
         cs.id,
         c.skill_name as competence,
         cs.nom_plateforme
