@@ -1,0 +1,21 @@
+# models/marts/_sources_streamlit.yml
+version: 2
+
+sources:
+  - name: app_streamlit
+    description: >
+      Tables alimentées directement par l'application Streamlit (formulaire
+      client + upsert via shared.py), pas par le pipeline dbt classique.
+      Déclarées ici comme sources pour garder un lineage dbt correct et
+      pouvoir les référencer proprement dans les modèles.
+    database: job-market-de-492514
+    schema: dbt_hermann
+    tables:
+      - name: dim_clients
+        description: Profil client (formulaire + CV), une ligne par client, upsert par email.
+      - name: bridge_clients_competences
+        description: Compétences sélectionnées par chaque client.
+      - name: bridge_clients_metiers
+        description: Métiers recherchés par chaque client.
+      - name: bridge_clients_localisations
+        description: Villes recherchées par chaque client.

@@ -28,5 +28,6 @@ select
     nom_secteur,
     date_publication,
     nom_plateforme,
-    nbre_postes
+    nbre_postes,
+    lien_offre
 from int_offres_combinees
