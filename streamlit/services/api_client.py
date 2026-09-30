@@ -143,8 +143,8 @@ def get_salaires_dimension(filters: dict, dimension: str = "region", limit: int 
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def get_salaires_competences(filters: dict, limit: int = 20) -> list[dict]:
-    return _get("/api/insights/salaires-competences", {**filters, "limit": limit})
+def get_salaires_competences(filters: dict, limit: int = 20, tri: str = "salaire") -> list[dict]:
+    return _get("/api/insights/salaires-competences", {**filters, "limit": limit, "tri": tri})
 
 
 @st.cache_data(ttl=300, show_spinner=False)

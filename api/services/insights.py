@@ -145,7 +145,7 @@ def get_salaires_par_dimension(
     return [SalaireParDimension(**row) for row in rows]
 
 
-def get_salaires_competences(filters: FilterParams, limit: int = 20) -> list[SalaireCompetence]:
+def get_salaires_competences(filters: FilterParams, limit: int = 20, tri: Literal["salaire", "demande"] = "salaire",) -> list[SalaireCompetence]:
     """Salaire moyen/median des offres demandant chaque competence.
 
     Joint fact_offres au bridge competences. Utile cote candidat : quelles
@@ -168,7 +168,7 @@ def get_salaires_competences(filters: FilterParams, limit: int = 20) -> list[Sal
     {where_sql}
     GROUP BY comp.competence, comp.categorie
     HAVING nb_offres >= 3
-    ORDER BY salaire_moyen DESC
+    ORDER BY {"nb_offres" if tri == "demande" else "salaire_moyen"} DESC
     LIMIT {int(limit)}
     """
     rows = run_query(sql, params)

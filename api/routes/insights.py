@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
+from typing import Literal
+
 from api.dependencies import FilterParams, get_filters
 from api.schemas.insights import (
     ComparaisonPlateforme,
@@ -72,5 +74,6 @@ def read_salaires_dimension(
 def read_salaires_competences(
     filters: FilterParams = Depends(get_filters),
     limit: int = Query(20, ge=1, le=50),
+    tri: Literal["salaire", "demande"] = Query("salaire"),
 ) -> list[SalaireCompetence]:
-    return insights_service.get_salaires_competences(filters, limit=limit)
+    return insights_service.get_salaires_competences(filters, limit=limit, tri=tri)
