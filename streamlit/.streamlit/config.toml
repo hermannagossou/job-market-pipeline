@@ -1,0 +1,11 @@
+# Thème visuel du dashboard — palette sobre et professionnelle.
+# Bleu ardoise profond en primaire, fond clair légèrement teinté, accent lisible.
+[theme]
+primaryColor = "#2563EB"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#0F172A"
+font = "sans serif"
+
+[server]
+headless = true

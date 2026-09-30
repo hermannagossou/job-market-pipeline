@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements-streamlit.txt .
+RUN pip install --no-cache-dir -r requirements-streamlit.txt
+
+# Copier tout le dossier streamlit (app.py, pages/, components/, services/,
+# .streamlit/config.toml, scripts/, et assets/ éventuellement déjà rempli).
+COPY streamlit ./
+
+# Télécharger les fonds de carte GeoJSON pendant le build, pour une image
+# autonome et reproductible même si le dossier assets/ était vide en local.
+# Le script est idempotent : il ne retélécharge pas un fichier déjà présent.
+RUN python scripts/download_geojson.py || \
+    echo "Avertissement : téléchargement GeoJSON échoué au build (pas de réseau ?). Les cartes se replieront sur des graphiques en barres."
+
+EXPOSE 8501
+
+# --server.address 0.0.0.0 pour être joignable hors du conteneur.
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]

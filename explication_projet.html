@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comprendre le projet : de l'API à Docker</title>
+<style>
+  :root {
+    --ink: #12212e;
+    --ink-soft: #40566a;
+    --paper: #f7f9fb;
+    --panel: #ffffff;
+    --line: #dce4ec;
+    --flow: #1d6feb;       /* bleu "donnée en mouvement" */
+    --flow-deep: #0b3a7a;
+    --signal: #e8871e;     /* ambre, accent d'attention */
+    --grid: #eef3f7;
+    --code-bg: #0e2233;
+    --code-ink: #cfe3f7;
+    --ok: #1a8a5a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- Hero ---- */
+  header.hero {
+    background:
+      radial-gradient(1200px 400px at 80% -50%, rgba(29,111,235,.16), transparent 60%),
+      linear-gradient(180deg, #0b1e2e 0%, #123049 100%);
+    color: #eaf2fb;
+    padding: 68px 0 52px;
+    border-bottom: 3px solid var(--signal);
+  }
+  header.hero h1 {
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    line-height: 1.08;
+    margin: 0 0 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header.hero p {
+    font-size: 1.12rem;
+    color: #b9cfe4;
+    max-width: 62ch;
+    margin: 0;
+  }
+  .hero-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 32px;
+    font-family: "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: .82rem;
+    color: #9fc0e0;
+  }
+  .hero-flow span.node {
+    background: rgba(29,111,235,.18);
+    border: 1px solid rgba(120,175,235,.35);
+    padding: 5px 11px;
+    border-radius: 6px;
+    color: #dcebfa;
+  }
+  .hero-flow span.arr { color: var(--signal); font-weight: 700; }
+
+  /* ---- Switch ---- */
+  .switch-bar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(247,249,251,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 0;
+  }
+  .switch {
+    display: flex; gap: 6px;
+    background: var(--grid);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 5px;
+    width: fit-content;
+  }
+  .switch button {
+    font-family: inherit;
+    font-size: .96rem;
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .18s ease;
+    font-weight: 600;
+  }
+  .switch button .tag {
+    display: block;
+    font-size: .72rem;
+    font-weight: 400;
+    opacity: .7;
+    margin-top: 1px;
+  }
+  .switch button[aria-selected="true"] {
+    background: var(--flow);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(29,111,235,.3);
+  }
+  .switch button[aria-selected="true"] .tag { opacity: .85; }
+
+  /* ---- Content ---- */
+  main { padding: 40px 0 90px; }
+  .view { display: none; }
+  .view.active { display: block; animation: fade .3s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  h2 {
+    font-size: 1.7rem;
+    margin: 46px 0 6px;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  h2 .step-num {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .95rem;
+    color: var(--flow);
+    background: #e7f0fe;
+    border: 1px solid #c5dcfb;
+    padding: 2px 9px;
+    border-radius: 20px;
+    vertical-align: middle;
+    margin-right: 10px;
+    font-weight: 500;
+  }
+  h3 { font-size: 1.18rem; margin: 28px 0 4px; }
+  p { margin: 12px 0; }
+  .lead { font-size: 1.15rem; color: var(--ink-soft); }
+
+  .analogy {
+    border-left: 3px solid var(--signal);
+    background: #fdf6ec;
+    padding: 14px 20px;
+    margin: 18px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .analogy strong { color: #a75d0a; }
+
+  .keyword {
+    background: #e7f0fe;
+    color: var(--flow-deep);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: .95em;
+  }
+
+  .note {
+    display: flex; gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 20px 0;
+  }
+  .note .ic {
+    flex-shrink: 0; width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--flow); color: #fff;
+    display: grid; place-items: center;
+    font-size: 1rem; font-weight: 700;
+    font-family: system-ui;
+  }
+  .note.why .ic { background: var(--signal); }
+  .note.def .ic { background: var(--ok); }
+  .note h4 { margin: 0 0 4px; font-size: 1rem; }
+  .note p { margin: 0; font-size: .97rem; color: var(--ink-soft); }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 16px 18px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-family: "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: .86rem;
+    line-height: 1.55;
+    margin: 16px 0;
+  }
+  pre .c { color: #6f97bd; }      /* commentaire */
+  pre .k { color: #e8871e; }      /* mot-clé accent */
+  code.inl {
+    background: #eef3f7;
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .86em;
+    color: var(--flow-deep);
+  }
+
+  /* pipeline vertical */
+  .pipe { margin: 26px 0; }
+  .pipe .stage {
+    position: relative;
+    padding: 0 0 26px 42px;
+    border-left: 2px solid var(--line);
+  }
+  .pipe .stage:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .pipe .stage::before {
+    content: attr(data-n);
+    position: absolute; left: -15px; top: -2px;
+    width: 28px; height: 28px;
+    background: var(--flow); color: #fff;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .82rem; font-weight: 600;
+    box-shadow: 0 0 0 4px var(--paper);
+  }
+  .pipe .stage h4 { margin: 0 0 3px; font-size: 1.05rem; }
+  .pipe .stage p { margin: 0; font-size: .96rem; color: var(--ink-soft); }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 20px 0;
+    font-size: .94rem;
+  }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--flow-deep); font-size: .82rem; letter-spacing: .02em; }
+  td code.inl { font-size: .82em; }
+
+  .takeaway {
+    background: linear-gradient(180deg, #0b1e2e, #123049);
+    color: #eaf2fb;
+    border-radius: 14px;
+    padding: 26px 28px;
+    margin: 40px 0 0;
+  }
+  .takeaway h3 { margin: 0 0 12px; color: #fff; }
+  .takeaway ul { margin: 0; padding-left: 20px; }
+  .takeaway li { margin: 8px 0; color: #c5d8ea; }
+  .takeaway li strong { color: #fff; }
+
+  /* voyage d'une requête */
+  .journey { margin: 26px 0 10px; }
+  .jstep {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 14px 0;
+  }
+  .jhead {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 1.08rem; font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .jhead .jn {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, var(--flow), var(--flow-deep));
+    color: #fff;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .9rem; font-weight: 700;
+  }
+  .jstep p { margin: 8px 0; }
+  .jstep pre { margin: 12px 0 4px; }
+  .jstep .note { margin: 14px 0 2px; }
+
+  /* schéma des points de raccordement */
+  .wiring { margin: 28px 0 10px; }
+  .wlayer {
+    border-radius: 12px;
+    padding: 16px 18px;
+    text-align: center;
+    position: relative;
+  }
+  .wlayer-existing { background: #eef3f7; border: 1px dashed #9fb4c7; }
+  .wlayer-api { background: linear-gradient(135deg, #e7f0fe, #d4e4fd); border: 1px solid #b6d2fb; }
+  .wlayer-front { background: #fdf6ec; border: 1px solid #f0d9b5; }
+  .wtag {
+    display: inline-block;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .72rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    letter-spacing: .02em;
+  }
+  .wbox {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .wbox small, .wlayer small { font-weight: 400; font-size: .82rem; color: var(--ink-soft); }
+  .wbox-api .winner {
+    margin: 8px auto 4px;
+    background: #fff;
+    border: 1px solid #b6d2fb;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .8rem;
+    color: var(--flow-deep);
+    display: inline-block;
+  }
+  .wbox-api .warr { color: var(--signal); font-weight: 700; }
+
+  .wconn {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px 12px 0;
+    margin: 4px 0 4px 14px;
+    border-left: 2px solid var(--flow);
+    position: relative;
+  }
+  .wconn::before {
+    content: ""; position: absolute; left: -2px; top: 0; bottom: 0; width: 2px;
+    background: var(--flow);
+  }
+  .wpoint {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    background: var(--flow); color: #fff;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .8rem; font-weight: 700;
+    margin-left: -14px;
+    box-shadow: 0 0 0 4px var(--paper);
+  }
+  .wconn-txt { font-size: .95rem; color: var(--ink-soft); padding-top: 2px; }
+  .wconn-txt strong { color: var(--ink); }
+  .wconn-wrap { border-left-color: var(--signal); }
+  .wconn-wrap::before { background: var(--signal); }
+  .wconn-wrap .wpoint { background: var(--signal); }
+
+  .divider { height: 1px; background: var(--line); margin: 40px 0; border: 0; }
+  footer { color: var(--ink-soft); font-size: .88rem; padding: 30px 0 60px; text-align: center; }
+
+  @media (max-width: 560px) {
+    .switch button { padding: 8px 12px; font-size: .88rem; }
+    .hero-flow { font-size: .72rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>De l'API à Docker :<br>comment les données arrivent à l'écran</h1>
+    <p>Ce projet récupère des offres d'emploi, les range dans une base, puis les affiche dans un tableau de bord. Voici l'histoire de la dernière partie du voyage — celle que nous venons de construire ensemble.</p>
+    <div class="hero-flow">
+      <span class="node">BigQuery</span><span class="arr">→</span>
+      <span class="node">API</span><span class="arr">→</span>
+      <span class="node">Client HTTP</span><span class="arr">→</span>
+      <span class="node">Dashboard</span><span class="arr">→</span>
+      <span class="node">Docker</span>
+    </div>
+  </div>
+</header>
+
+<div class="switch-bar">
+  <div class="wrap">
+    <div class="switch" role="tablist">
+      <button role="tab" aria-selected="true" onclick="show('novice', this)">
+        En 10 minutes
+        <span class="tag">pour un total débutant</span>
+      </button>
+      <button role="tab" aria-selected="false" onclick="show('student', this)">
+        Le cours
+        <span class="tag">pour un élève Data Engineer</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<main>
+<div class="wrap">
+
+<!-- ============================ NOVICE ============================ -->
+<section id="novice" class="view active">
+
+  <p class="lead">Imaginez un grand restaurant. En cuisine, une immense réserve d'ingrédients bien rangés. En salle, des clients qui veulent manger. Entre les deux, il faut de l'organisation. Notre projet, c'est exactement ça — sauf qu'au lieu de plats, on sert des <em>informations sur l'emploi</em>.</p>
+
+  <h2><span class="step-num">1</span>La réserve : là où vivent les données</h2>
+  <p>Toutes les offres d'emploi récupérées ont été nettoyées et rangées dans une grande base de données en ligne (elle s'appelle <span class="keyword">BigQuery</span>). C'est la réserve du restaurant : tout y est, bien organisé, mais un client n'y entre jamais lui-même. On ne laisse pas les gens fouiller dans la chambre froide.</p>
+  <div class="analogy">
+    <strong>L'image à retenir :</strong> la base de données, c'est le garde-manger. Précieux, organisé, et fermé au public.
+  </div>
+
+  <h2><span class="step-num">2</span>Le serveur : l'API</h2>
+  <p>Comment un client obtient-il un plat sans entrer en cuisine ? Il le demande à un <strong>serveur</strong>. Le serveur prend la commande, va en cuisine, revient avec l'assiette. Dans notre projet, ce serveur s'appelle une <span class="keyword">API</span>.</p>
+  <p>Le tableau de bord ne parle jamais directement à la base de données. Il passe toujours par l'API : « donne-moi le nombre d'offres par région », et l'API revient avec la réponse, prête à l'emploi.</p>
+  <div class="note why">
+    <div class="ic">?</div>
+    <div>
+      <h4>Pourquoi ne pas laisser le client aller en cuisine ?</h4>
+      <p>Pour la sécurité et l'ordre. Si tout le monde fouillait la réserve, ce serait le chaos, et n'importe qui pourrait tout casser. Un seul point de passage, contrôlé, c'est plus sûr et plus simple à réparer.</p>
+    </div>
+  </div>
+
+  <h2><span class="step-num">3</span>Le menu : les « endpoints »</h2>
+  <p>Un serveur ne devine pas les envies : il y a un <strong>menu</strong>. Chaque plat a un nom précis. Dans une API, ces « plats » s'appellent des <span class="keyword">endpoints</span> — ce sont les demandes possibles. Chez nous, le menu ressemble à ça :</p>
+  <div class="pipe">
+    <div class="stage" data-n="A"><h4>« Les chiffres clés »</h4><p>Combien d'offres, d'entreprises, de métiers en tout ?</p></div>
+    <div class="stage" data-n="B"><h4>« Les offres par région »</h4><p>Où recrute-t-on le plus en France ?</p></div>
+    <div class="stage" data-n="C"><h4>« Les compétences demandées »</h4><p>Qu'est-ce que les entreprises recherchent ?</p></div>
+    <div class="stage" data-n="D"><h4>« Les salaires par métier »</h4><p>Combien gagne-t-on selon le poste ?</p></div>
+  </div>
+  <p>On peut aussi préciser sa commande : « les offres par région, <em>mais uniquement les CDI en Île-de-France</em> ». Ce sont les <strong>filtres</strong>.</p>
+
+  <h2><span class="step-num">4</span>La salle : le tableau de bord</h2>
+  <p>C'est la partie que les gens voient : de belles pages avec des graphiques, des cartes de France colorées, des chiffres qui se mettent à jour quand on change un filtre. On l'a organisée en <strong>espaces selon qui regarde</strong> :</p>
+  <table>
+    <tr><th>L'espace</th><th>Pour qui</th><th>Répond à la question</th></tr>
+    <tr><td>Chercheur d'emploi</td><td>Quelqu'un qui cherche du travail</td><td>Où postuler ? Quoi apprendre ?</td></tr>
+    <tr><td>RH / Recruteur</td><td>Une entreprise qui recrute</td><td>Est-ce que je propose un bon salaire ?</td></tr>
+    <tr><td>Analyste</td><td>Quelqu'un qui étudie le marché</td><td>Quelles sont les grandes tendances ?</td></tr>
+  </table>
+  <div class="analogy">
+    <strong>Le détail malin :</strong> quand on colore une carte de France selon le nombre d'offres, il faut faire correspondre « Île-de-France » dans nos données avec « Île-de-France » sur la carte. Ça paraît évident, mais un simple accent ou une apostrophe différente et l'ordinateur ne reconnaît plus la région ! On a donc appris à la machine à ignorer ces petites différences.
+  </div>
+
+  <h2><span class="step-num">5</span>Le passe-plat : la connexion entre salle et cuisine</h2>
+  <p>Entre la salle (le tableau de bord) et le serveur (l'API), il y a un <strong>passe-plat</strong> bien réglé. On a prévu les imprévus : si la cuisine met trop de temps, on n'attend pas indéfiniment. Si un plat n'est pas disponible, on affiche un message clair au lieu de laisser le client perplexe. Et si dix personnes commandent la même chose, on garde une copie sous le coude quelques minutes plutôt que de refaire l'aller-retour à chaque fois (c'est ce qu'on appelle la <span class="keyword">mise en cache</span>).</p>
+
+  <h2><span class="step-num">6</span>Le restaurant en kit : Docker</h2>
+  <p>Dernier problème : ce restaurant fonctionne parfaitement sur <em>notre</em> ordinateur. Mais comment le faire tourner ailleurs, sur la machine d'un collègue ou d'un formateur, sans tout réinstaller pièce par pièce ?</p>
+  <p>La solution s'appelle <span class="keyword">Docker</span>. Imaginez qu'on emballe tout le restaurant — la cuisine, la salle, le serveur, les recettes — dans un conteneur standardisé, comme ceux qu'on charge sur les bateaux. On l'expédie, on l'ouvre n'importe où, et tout fonctionne immédiatement, à l'identique.</p>
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>Le résultat concret</h4>
+      <p>Une seule commande — <code class="inl">docker compose up</code> — et le serveur (API) et la salle (dashboard) démarrent ensemble, se parlent, et l'application est prête. Sur n'importe quel ordinateur.</p>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <h3>Ce qu'il faut retenir en une phrase chacun</h3>
+    <ul>
+      <li><strong>Base de données</strong> — le garde-manger fermé où tout est rangé.</li>
+      <li><strong>API</strong> — le serveur qui va chercher ce qu'on demande, sans laisser entrer en cuisine.</li>
+      <li><strong>Endpoints</strong> — le menu : la liste des demandes possibles.</li>
+      <li><strong>Dashboard</strong> — la salle : les graphiques et cartes que l'on regarde.</li>
+      <li><strong>Cache</strong> — garder une copie sous le coude pour aller plus vite.</li>
+      <li><strong>Docker</strong> — le restaurant emballé en kit, prêt à ouvrir partout.</li>
+    </ul>
+  </div>
+
+</section>
+
+<!-- ============================ STUDENT ============================ -->
+<section id="student" class="view">
+
+  <p class="lead">On reprend le même trajet, mais avec le vocabulaire exact et les raisons techniques de chaque choix. Objectif : que tu puisses non seulement suivre, mais <em>défendre</em> cette architecture à l'oral.</p>
+
+  <div class="note">
+    <div class="ic">↓</div>
+    <div>
+      <h4>Le flux complet</h4>
+      <p><code class="inl">BigQuery (marts dbt) → FastAPI → client HTTP → Streamlit → navigateur</code>, le tout empaqueté avec Docker Compose. Chaque flèche est un endroit où l'on a fait des choix.</p>
+    </div>
+  </div>
+
+  <h2><span class="step-num">1</span>La source : les tables <code class="inl">marts</code> de dbt</h2>
+  <p>L'API lit dans BigQuery, plus précisément dans les tables <span class="keyword">marts</span> produites par dbt : une table de faits <code class="inl">fact_offres</code> entourée de tables de dimensions (<code class="inl">dim_metiers</code>, <code class="inl">dim_localisations</code>, <code class="inl">dim_dates</code>…). C'est un <strong>schéma en étoile</strong> classique : les faits au centre, les dimensions autour, reliés par des clés étrangères.</p>
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Pourquoi partir des marts et pas des tables intermédiaires ?</h4>
+      <p>Les marts sont la couche « prête à consommer » : dédoublonnée, testée (chaque clé étrangère a un test <code class="inl">relationships</code> en dbt), stable. C'est le contrat de données sur lequel l'API peut s'appuyer sans se soucier de la logique de transformation en amont.</p>
+    </div>
+  </div>
+
+  <h2><span class="step-num">2</span>L'API : FastAPI en couches</h2>
+  <p>On a choisi <span class="keyword">FastAPI</span> : framework Python moderne, asynchrone, avec validation automatique des données et documentation interactive générée toute seule (Swagger à <code class="inl">/docs</code>). L'API n'est pas un seul gros fichier — elle est découpée en responsabilités :</p>
+  <table>
+    <tr><th>Couche</th><th>Rôle</th></tr>
+    <tr><td><code class="inl">routes/</code></td><td>Définit les URLs et les paramètres acceptés. Ne contient pas de logique.</td></tr>
+    <tr><td><code class="inl">services/</code></td><td>Construit les requêtes SQL et parle à BigQuery.</td></tr>
+    <tr><td><code class="inl">schemas/</code></td><td>Modèles <span class="keyword">Pydantic</span> : la forme garantie des réponses.</td></tr>
+    <tr><td><code class="inl">db/</code></td><td>Le client BigQuery partagé + l'exécution des requêtes.</td></tr>
+    <tr><td><code class="inl">core/</code></td><td>La configuration (lue depuis les variables d'environnement).</td></tr>
+  </table>
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>Séparation des responsabilités</h4>
+      <p>Ce découpage (routes → services → db) est le principe le plus important à citer : chaque couche a un seul métier. On peut changer la base de données sans toucher aux routes, ou modifier une URL sans réécrire le SQL. C'est ce qui rend le code testable et maintenable.</p>
+    </div>
+  </div>
+
+  <h3>La validation avec Pydantic</h3>
+  <p>Chaque réponse d'API est décrite par une classe Pydantic. Si le code tente de renvoyer une donnée qui ne colle pas au modèle (un texte là où on attend un nombre), l'erreur est attrapée immédiatement. C'est un <strong>contrat</strong> entre l'API et tout ce qui la consomme.</p>
+  <pre><span class="c"># schemas/kpis.py — la forme garantie d'une réponse "chiffres clés"</span>
+class KpiOverview(BaseModel):
+    nb_offres: int
+    nb_entreprises: int
+    nb_metiers: int
+    salaire_min_moyen: float | None = None</pre>
+
+  <h2><span class="step-num">3</span>Les endpoints REST et les filtres partagés</h2>
+  <p>L'API expose une dizaine d'<span class="keyword">endpoints REST</span>, organisés par domaine : <code class="inl">/api/kpis/overview</code>, <code class="inl">/api/geo/regions</code>, <code class="inl">/api/competences/repartition</code>, <code class="inl">/api/insights/salaires-metiers</code>… Tous acceptent le <strong>même jeu de filtres</strong> (région, métier, contrat, période…) grâce à une dépendance FastAPI unique injectée partout via <code class="inl">Depends()</code>.</p>
+  <pre><span class="c"># Un filtre fourni → une condition SQL paramétrée. Sinon, rien.</span>
+<span class="k">if</span> filters.region:
+    conditions.append(<span class="k">"loc.region = @region"</span>)
+    params.append(ScalarQueryParameter(<span class="k">"region"</span>, <span class="k">"STRING"</span>, filters.region))</pre>
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Pourquoi des requêtes paramétrées (<code class="inl">@region</code>) ?</h4>
+      <p>Jamais de valeur utilisateur collée directement dans le SQL. Les paramètres nommés évitent les injections SQL et gèrent proprement l'échappement (une apostrophe dans un nom d'entreprise ne casse plus la requête). À citer absolument : c'est une question de sécurité.</p>
+    </div>
+  </div>
+
+  <h3>La performance : agréger côté base</h3>
+  <p>Règle d'or respectée partout : <strong>on n'agrège jamais en Python</strong>. On ne rapatrie pas 10 000 lignes pour les compter ensuite. Chaque endpoint délègue le <code class="inl">GROUP BY</code>, les <code class="inl">COUNT</code>, les moyennes à BigQuery, et ne reçoit que le résultat déjà calculé. La liste détaillée d'offres est en plus <strong>paginée</strong> (<code class="inl">LIMIT / OFFSET</code>).</p>
+
+  <h2><span class="step-num">4</span>Le client HTTP côté Streamlit</h2>
+  <p>Le dashboard <span class="keyword">Streamlit</span> ne connaît pas BigQuery. Il ne connaît qu'un module, <code class="inl">api_client.py</code>, qui centralise tous les appels HTTP vers l'API. C'est le seul point de contact avec les données.</p>
+  <pre><span class="c"># services/api_client.py — mise en cache + gestion d'erreurs centralisée</span>
+<span class="k">@st.cache_data(ttl=300)</span>  <span class="c"># garde la réponse 5 min</span>
+def get_regions(filters: dict) -> list[dict]:
+    return _get(<span class="k">"/api/geo/regions"</span>, filters)</pre>
+  <p>Ce client gère : le <strong>timeout</strong> (on n'attend pas l'API indéfiniment), les <strong>erreurs HTTP</strong> (transformées en message clair, jamais une trace brute à l'écran), et le <strong>cache</strong> (<code class="inl">st.cache_data</code>, TTL 5 min — cohérent avec une ingestion quotidienne des données).</p>
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>Pourquoi cette contrainte « Streamlit → API → données » ?</h4>
+      <p>C'est l'objectif pédagogique du projet : démontrer une architecture en couches. Mais c'est aussi une bonne pratique réelle — la logique d'accès aux données est isolée dans une brique unique, réutilisable (une appli mobile pourrait taper la même API) et testable indépendamment de l'interface.</p>
+    </div>
+  </div>
+
+  <h2><span class="step-num">5</span>La visualisation : Plotly et la carte choroplèthe</h2>
+  <p>Les graphiques sont en <span class="keyword">Plotly</span>, stylés par un thème central (<code class="inl">components/theme.py</code>) pour une identité visuelle homogène. Le morceau technique intéressant : la <span class="keyword">carte choroplèthe</span> (une carte où chaque zone est colorée selon une valeur).</p>
+  <p>Elle a besoin d'un fichier <span class="keyword">GeoJSON</span> décrivant les contours des régions. Plotly fait correspondre chaque ligne de nos données à un polygone via le nom de région. Problème : <code class="inl">"Provence-Alpes-Côte d'Azur"</code> avec une apostrophe droite <code class="inl">'</code> ou typographique <code class="inl">’</code>, ce ne sont pas les mêmes chaînes pour un ordinateur.</p>
+  <pre><span class="c"># On joint sur une CLÉ NORMALISÉE, pas sur le nom brut</span>
+def normalize(name):
+    <span class="c"># retire accents, apostrophes, tirets, espaces, met en minuscules</span>
+    <span class="c"># "Île-de-France" et "ile de france" → "iledefrance"</span>
+    ...</pre>
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Le repli gracieux (graceful degradation)</h4>
+      <p>Si le GeoJSON n'est pas téléchargé, la carte ne plante pas : elle est remplacée automatiquement par un graphique en barres, avec un message indiquant la commande à lancer. Une appli robuste dégrade proprement au lieu de casser.</p>
+    </div>
+  </div>
+
+  <h2><span class="step-num">6</span>La conteneurisation : Docker Compose</h2>
+  <p><span class="keyword">Docker</span> empaquette une application avec tout ce dont elle a besoin (code, dépendances, version de Python) dans une <strong>image</strong>, exécutée dans un <strong>conteneur</strong> isolé. Fini le « ça marche sur ma machine ». <span class="keyword">Docker Compose</span> orchestre plusieurs conteneurs ensemble.</p>
+  <p>On a deux services : <code class="inl">api</code> et <code class="inl">streamlit</code>. Trois points techniques à connaître :</p>
+  <div class="pipe">
+    <div class="stage" data-n="1"><h4>Réseau interne</h4><p>Streamlit joint l'API via <code class="inl">http://api:8000</code> — le nom du service, pas <code class="inl">localhost</code>. Dans le réseau Docker, <code class="inl">api</code> résout vers le bon conteneur.</p></div>
+    <div class="stage" data-n="2"><h4>Ordre de démarrage</h4><p>Un <span class="keyword">healthcheck</span> sur l'API + <code class="inl">depends_on: condition: service_healthy</code> : Streamlit ne démarre qu'une fois l'API prête à répondre.</p></div>
+    <div class="stage" data-n="3"><h4>Secrets montés, pas copiés</h4><p>Les identifiants BigQuery sont montés en <strong>volume</strong> lecture-seule, jamais inclus dans l'image (exclus par <code class="inl">.dockerignore</code>). On ne met jamais de secret dans une image.</p></div>
+  </div>
+  <pre><span class="c"># Un seul mot pour tout lancer</span>
+docker compose up --build
+<span class="c"># → API sur :8000 (+ /docs), dashboard sur :8501, communication OK</span></pre>
+
+  <h2><span class="step-num">7</span>Le voyage complet d'une requête, étape par étape</h2>
+  <p>Assez de théorie. Suivons <strong>une seule action utilisateur</strong> de bout en bout et regardons ce qui circule concrètement à chaque maillon. Scénario : dans l'espace Chercheur d'emploi, l'utilisateur choisit le métier <strong>« Data Engineer »</strong> dans la barre latérale, et veut voir <em>où l'on recrute en France</em>. On suit l'appel qui alimente la carte des régions.</p>
+
+  <div class="journey">
+    <div class="jstep">
+      <div class="jhead"><span class="jn">1</span> L'utilisateur agit dans Streamlit</div>
+      <p>Il sélectionne « Data Engineer ». La barre latérale (<code class="inl">components/sidebar.py</code>) met à jour le dictionnaire de filtres partagé par toute la page :</p>
+      <pre><span class="c"># l'état des filtres, en mémoire côté Streamlit</span>
+filters = {
+    <span class="k">"metier"</span>: <span class="k">"Data Engineer"</span>,
+    <span class="k">"region"</span>: None,      <span class="c"># "Toutes" → pas de filtre</span>
+    <span class="k">"type_contrat"</span>: None,
+    ...
+}</pre>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">2</span> Le client HTTP transforme ça en appel</div>
+      <p>La page appelle <code class="inl">get_regions(filters)</code>. Le client (<code class="inl">services/api_client.py</code>) nettoie les valeurs vides, puis construit l'URL. Les filtres deviennent des <span class="keyword">query parameters</span> :</p>
+      <pre><span class="c"># ce qui part réellement sur le réseau</span>
+GET http://api:8000/api/geo/regions?metier=Data+Engineer
+
+<span class="c"># côté code, tout passe par une seule fonction :</span>
+<span class="k">@st.cache_data(ttl=300)</span>
+def get_regions(filters: dict) -> list[dict]:
+    return _get(<span class="k">"/api/geo/regions"</span>, filters)</pre>
+      <div class="note def">
+        <div class="ic">✓</div>
+        <div>
+          <h4>Le cache agit ici</h4>
+          <p>Si cet appel exact (mêmes filtres) a déjà été fait il y a moins de 5 min, <code class="inl">st.cache_data</code> renvoie la réponse mémorisée <em>sans même contacter l'API</em>. Le voyage s'arrête là et reprend à l'étape 8.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">3</span> FastAPI reçoit et valide</div>
+      <p>La route (<code class="inl">routes/geo.py</code>) reçoit la requête. FastAPI lit les query parameters et les range dans un objet <code class="inl">FilterParams</code> via <code class="inl">Depends(get_filters)</code> — au passage, il <strong>valide les types</strong> (une date mal formée serait rejetée avec une erreur 422 automatique) :</p>
+      <pre><span class="c"># routes/geo.py</span>
+<span class="k">@router.get(</span><span class="k">"/regions"</span>, response_model=list[RepartitionItem])
+def read_repartition_regions(
+    filters: FilterParams = Depends(get_filters)
+):
+    <span class="k">return</span> geo_service.get_repartition_regions(filters)</pre>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">4</span> Le service construit le SQL paramétré</div>
+      <p>Le service (<code class="inl">services/geo.py</code>) traduit les filtres en conditions SQL. Seul <code class="inl">metier</code> est renseigné, donc une seule condition est ajoutée — avec un paramètre nommé <code class="inl">@metier</code>, jamais la valeur en dur :</p>
+      <pre><span class="c"># SQL effectivement envoyé à BigQuery</span>
+SELECT loc.region <span class="k">AS</span> label,
+       COUNT(<span class="k">DISTINCT</span> f.id_offre) <span class="k">AS</span> nb_offres
+FROM fact_offres f
+JOIN dim_localisations loc <span class="k">ON</span> f.id_localisation = loc.id_localisation
+JOIN dim_metiers met <span class="k">ON</span> f.id_metier = met.id_metier
+<span class="k">WHERE</span> met.nom = <span class="k">@metier</span>          <span class="c">-- valeur : "Data Engineer"</span>
+  <span class="k">AND</span> loc.region <span class="k">IS NOT NULL</span>
+GROUP BY loc.region
+ORDER BY nb_offres <span class="k">DESC</span></pre>
+      <div class="note why">
+        <div class="ic">!</div>
+        <div>
+          <h4>L'agrégation se fait ICI, dans BigQuery</h4>
+          <p>On ne récupère pas les milliers d'offres pour les compter en Python : c'est le <code class="inl">COUNT ... GROUP BY</code> qui fait le travail côté base. L'API ne reçoit qu'une poignée de lignes déjà agrégées — une par région.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">5</span> BigQuery renvoie des lignes brutes</div>
+      <p>Le client BigQuery (<code class="inl">db/bigquery.py</code>) exécute la requête et renvoie des lignes, converties en liste de dictionnaires Python :</p>
+      <pre><span class="c"># rows — ce que run_query() retourne</span>
+[
+  {<span class="k">"label"</span>: <span class="k">"Île-de-France"</span>,              <span class="k">"nb_offres"</span>: 87},
+  {<span class="k">"label"</span>: <span class="k">"Auvergne-Rhône-Alpes"</span>,       <span class="k">"nb_offres"</span>: 34},
+  {<span class="k">"label"</span>: <span class="k">"Occitanie"</span>,                  <span class="k">"nb_offres"</span>: 21},
+  {<span class="k">"label"</span>: <span class="k">"Nouvelle-Aquitaine"</span>,         <span class="k">"nb_offres"</span>: 18},
+  ...
+]</pre>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">6</span> Pydantic valide et sérialise en JSON</div>
+      <p>Le service enveloppe chaque ligne dans le modèle <code class="inl">RepartitionItem</code>. FastAPI le transforme automatiquement en <span class="keyword">JSON</span>, avec le bon type HTTP et les bons en-têtes. C'est ce que reçoit Streamlit :</p>
+      <pre><span class="c"># réponse HTTP 200 — corps JSON</span>
+[
+  {<span class="k">"label"</span>: <span class="k">"Île-de-France"</span>, <span class="k">"nb_offres"</span>: 87},
+  {<span class="k">"label"</span>: <span class="k">"Auvergne-Rhône-Alpes"</span>, <span class="k">"nb_offres"</span>: 34},
+  {<span class="k">"label"</span>: <span class="k">"Occitanie"</span>, <span class="k">"nb_offres"</span>: 21},
+  ...
+]</pre>
+      <div class="note def">
+        <div class="ic">✓</div>
+        <div>
+          <h4>Le contrat Pydantic protège les deux côtés</h4>
+          <p>Si le SQL renvoyait un jour <code class="inl">nb_offres</code> en texte au lieu d'un entier, Pydantic lèverait une erreur ici, côté API — avant même que Streamlit ne reçoive une donnée corrompue. La forme est garantie.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">7</span> Le client HTTP gère la réponse (et les incidents)</div>
+      <p>De retour dans <code class="inl">api_client.py</code>, la réponse JSON est désérialisée en objets Python. Et si quelque chose s'était mal passé ? Tout est prévu, et traduit en message clair au lieu d'une trace brute :</p>
+      <pre><span class="c"># extrait simplifié de _get()</span>
+<span class="k">try</span>:
+    r = requests.get(url, params=..., timeout=REQUEST_TIMEOUT)
+<span class="k">except</span> requests.exceptions.Timeout:
+    <span class="k">raise</span> ApiError(<span class="k">"L'API met trop de temps à répondre."</span>)
+<span class="k">except</span> requests.exceptions.ConnectionError:
+    <span class="k">raise</span> ApiError(<span class="k">"Impossible de joindre l'API."</span>)
+<span class="k">if not</span> r.ok:
+    <span class="k">raise</span> ApiError(f<span class="k">"Erreur ({r.status_code})."</span>)</pre>
+    </div>
+
+    <div class="jstep">
+      <div class="jhead"><span class="jn">8</span> Streamlit dessine la carte</div>
+      <p>La page passe ces données au module carte (<code class="inl">components/map_france.py</code>). Chaque <code class="inl">label</code> est apparié à un polygone du GeoJSON via la clé normalisée, et <code class="inl">nb_offres</code> détermine l'intensité de la couleur. L'utilisateur voit l'Île-de-France en bleu foncé, le reste en dégradé. <strong>Fin du voyage.</strong></p>
+      <div class="note why">
+        <div class="ic">!</div>
+        <div>
+          <h4>Le point clé à retenir de tout ce trajet</h4>
+          <p>À aucun moment Streamlit n'a « vu » BigQuery. Il a demandé une URL, reçu du JSON. On pourrait remplacer BigQuery par une autre base, ou brancher une appli mobile sur la même API : rien ne changerait côté dashboard. C'est toute la force du découpage en couches.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Un second exemple : quand la forme de sortie change</h3>
+  <p>Tous les endpoints ne renvoient pas la même forme. Comparons deux réponses pour bien voir que <strong>chaque endpoint a son propre contrat Pydantic</strong>, et que le dashboard s'y adapte.</p>
+  <table>
+    <tr><th>Endpoint</th><th>Forme de sortie (JSON)</th><th>Utilisé pour</th></tr>
+    <tr>
+      <td><code class="inl">/api/geo/regions</code></td>
+      <td><code class="inl">[{"label", "nb_offres"}]</code></td>
+      <td>Carte, barres régions</td>
+    </tr>
+    <tr>
+      <td><code class="inl">/api/competences/repartition</code></td>
+      <td><code class="inl">[{"competence", "categorie", "nb_offres"}]</code></td>
+      <td>Barres compétences</td>
+    </tr>
+    <tr>
+      <td><code class="inl">/api/kpis/overview</code></td>
+      <td><code class="inl">{"nb_offres", "nb_entreprises", ...}</code> (un seul objet)</td>
+      <td>Cartes KPI</td>
+    </tr>
+    <tr>
+      <td><code class="inl">/api/insights/salaires-metiers</code></td>
+      <td><code class="inl">[{"metier", "salaire_min_moyen", "part_declares", ...}]</code></td>
+      <td>Graphique fourchettes</td>
+    </tr>
+  </table>
+  <div class="note why">
+    <div class="ic">!</div>
+    <div>
+      <h4>Souviens-toi du bug qu'on a corrigé</h4>
+      <p>Le composant graphique attendait une colonne <code class="inl">label</code>, mais l'endpoint compétences renvoie <code class="inl">competence</code>. D'où le paramètre <code class="inl">label_key</code> ajouté aux fonctions de graphique : il dit quelle colonne lire selon l'endpoint appelé. C'est exactement pour ça qu'on documente la forme de chaque sortie.</p>
+    </div>
+  </div>
+
+  <h3>Où voir tout ça en vrai</h3>
+  <p>FastAPI génère une documentation interactive automatiquement. En lançant l'API, ouvre <code class="inl">http://localhost:8000/docs</code> : tu y verras la liste de tous les endpoints, leurs paramètres, et tu pourras les <strong>tester en direct</strong> (bouton « Try it out ») en voyant la vraie sortie JSON. C'est l'outil idéal pour explorer l'API pendant la soutenance.</p>
+
+  <h2><span class="step-num">8</span>Comment l'API se raccorde au projet</h2>
+  <p>Un point de vocabulaire d'abord : l'API ne se « branche » pas dans le pipeline existant comme un module qu'on insérerait. Elle a été construite comme une <strong>nouvelle brique posée par-dessus</strong> les tables dbt/BigQuery, sans en modifier une seule ligne. Le raccordement tient en très peu de points de contact — c'est justement ce qui rend l'ensemble propre.</p>
+
+  <div class="wiring">
+    <div class="wlayer wlayer-existing">
+      <span class="wtag">Existant (non modifié)</span>
+      <div class="wbox">dbt → BigQuery<br><small>tables marts : fact_offres, dim_*</small></div>
+    </div>
+
+    <div class="wconn">
+      <span class="wpoint">1</span>
+      <div class="wconn-txt"><strong>Ancrage aux données</strong> — l'API lit le <em>résultat</em> de dbt (les marts matérialisées), pas GCS ni les modèles. Seul lien avec l'existant, volontairement minimal.</div>
+    </div>
+    <div class="wconn">
+      <span class="wpoint">2</span>
+      <div class="wconn-txt"><strong>Configuration</strong> — <code class="inl">BQ_PROJECT_ID</code> + <code class="inl">BQ_DATASET</code> lus depuis <code class="inl">.env</code> disent à l'API <em>quel</em> dataset lire. (<code class="inl">core/config.py</code>)</div>
+    </div>
+    <div class="wconn">
+      <span class="wpoint">3</span>
+      <div class="wconn-txt"><strong>Authentification</strong> — les Application Default Credentials donnent le <em>droit</em> de lire BigQuery. Aucun secret dans le code. (<code class="inl">db/bigquery.py</code>)</div>
+    </div>
+
+    <div class="wlayer wlayer-api">
+      <span class="wtag">L'API (nouvelle brique)</span>
+      <div class="wbox wbox-api">
+        FastAPI
+        <div class="winner">routes/ → services/ → db/ <span class="warr">↺</span> Pydantic</div>
+        <small>point 4 : câblage interne, de l'URL à la donnée validée</small>
+      </div>
+    </div>
+
+    <div class="wconn">
+      <span class="wpoint">5</span>
+      <div class="wconn-txt"><strong>Raccordement à Streamlit</strong> — le dashboard connaît l'API par une seule variable, <code class="inl">API_BASE_URL</code>. Il ignore totalement BigQuery. (<code class="inl">api_client.py</code>)</div>
+    </div>
+
+    <div class="wlayer wlayer-front">
+      <span class="wtag">Dashboard (nouvelle brique)</span>
+      <div class="wbox">Streamlit<br><small>pages, graphiques, cartes</small></div>
+    </div>
+
+    <div class="wconn wconn-wrap">
+      <span class="wpoint">6</span>
+      <div class="wconn-txt"><strong>Assemblage final</strong> — Docker Compose relie physiquement les deux briques : injecte la config dans l'API, monte les credentials en volume, donne à Streamlit la bonne <code class="inl">API_BASE_URL</code> sur le réseau Docker.</div>
+    </div>
+  </div>
+
+  <div class="note def">
+    <div class="ic">✓</div>
+    <div>
+      <h4>La phrase à retenir</h4>
+      <p>L'API se raccorde au projet par <strong>un seul endroit côté données</strong> (les marts, via 2 variables + les credentials), et Streamlit se raccorde à l'API par <strong>un seul endroit</strong> (<code class="inl">API_BASE_URL</code>). Tout le reste est du câblage interne. Peu de points de contact = architecture propre et défendable.</p>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <h3>Le glossaire pour la soutenance</h3>
+      <li><strong>FastAPI + Pydantic</strong> — framework API Python ; Pydantic garantit et valide la forme des données.</li>
+      <li><strong>Endpoint REST</strong> — une URL exposant une opération précise sur les données.</li>
+      <li><strong>Requête paramétrée</strong> — valeurs passées séparément du SQL, contre les injections.</li>
+      <li><strong>Agrégation côté base</strong> — laisser BigQuery calculer, ne transférer que le résultat.</li>
+      <li><strong>Séparation des responsabilités</strong> — routes / services / schemas / db, chacun un seul métier.</li>
+      <li><strong>Cache (st.cache_data)</strong> — mémoriser une réponse pour éviter des appels répétés.</li>
+      <li><strong>Choroplèthe + GeoJSON</strong> — carte colorée par valeur ; jointure sur clé normalisée.</li>
+      <li><strong>Docker / Compose</strong> — conteneurs isolés et reproductibles, orchestrés ensemble.</li>
+      <li><strong>Healthcheck</strong> — sonde qui vérifie qu'un service est prêt avant d'en démarrer un autre.</li>
+    </ul>
+  </div>
+
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">Document pédagogique — architecture API &amp; dashboard du projet Job Market. Deux niveaux de lecture, un même trajet de la donnée.</div>
+</footer>
+
+<script>
+  function show(id, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.switch button').forEach(b => b.setAttribute('aria-selected', 'false'));
+    btn.setAttribute('aria-selected', 'true');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
