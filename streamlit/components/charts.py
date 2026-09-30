@@ -210,3 +210,45 @@ def evolution_periode(points, title, color=PRIMARY):
     fig.update_xaxes(title=None)
     fig.update_yaxes(title="Offres")
     st.plotly_chart(apply_plotly_theme(fig, height=380), use_container_width=True)
+
+def salaire_scatter(items: list[dict], title: str, label_key: str = "competence", top_n: int | None = None) -> None:
+    """Nuage de points : demande (nb d'offres) en x, salaire moyen en y,
+    une couleur par catégorie de compétence, lignes pointillées aux médianes."""
+    if not items:
+        _empty(title)
+        return
+    df = pd.DataFrame(items)
+    manquantes = {label_key, "salaire_moyen", "nb_offres"} - set(df.columns)
+    if manquantes:
+        st.error(f"Colonnes absentes pour « {title} » : {sorted(manquantes)} (reçu : {list(df.columns)}).")
+        return
+    df = df.dropna(subset=["salaire_moyen"])
+    if df.empty:
+        _empty(title)
+        return
+    if top_n:
+        df = df.nlargest(top_n, "nb_offres")
+
+    couleur = None
+    if "categorie" in df.columns:
+        df["categorie"] = df["categorie"].fillna("Autre")
+        couleur = "categorie"
+
+    fig = px.scatter(
+        df,
+        x="nb_offres",
+        y="salaire_moyen",
+        color=couleur,
+        text=label_key,
+        color_discrete_sequence=COLOR_SEQUENCE,
+        labels={
+            "nb_offres": "Nombre d'offres (demande)",
+            "salaire_moyen": "Salaire moyen (€)",
+            "categorie": "Catégorie",
+        },
+    )
+    fig.update_traces(textposition="top center", marker=dict(size=10))
+    fig.add_hline(y=df["salaire_moyen"].median(), line_dash="dot", line_color="rgba(0,0,0,0.3)")
+    fig.add_vline(x=df["nb_offres"].median(), line_dash="dot", line_color="rgba(0,0,0,0.3)")
+    fig.update_layout(showlegend=True)
+    st.plotly_chart(apply_plotly_theme(fig, height=550), use_container_width=True)
