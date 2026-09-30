@@ -1,0 +1,6 @@
+# Contexte de build : api/ uniquement.
+__pycache__/
+**/__pycache__/
+*.pyc
+Dockerfile
+.dockerignore

@@ -20,25 +20,19 @@ source_region_departement as (
     from {{ ref('stg_ville_dept_reg') }}
 ),
 
--- Chemin 1 : sélection de la meilleure ville pour les offres avec code_commune.
--- On préfère le nom le plus long (plus précis) entre le champ API et le libellé INSEE.
+-- Chemin 1 : offres avec code_commune reconnu → libellé officiel INSEE, tel quel.
+-- Le nom extrait du libellé API n'est jamais plus fiable : il est tronqué par la
+-- regex de staging aux accents/apostrophes ("Villeneuve-d", "Besan") ou en
+-- majuscules sans tirets ("LEVALLOIS PERRET"). L'ancienne règle "nom le plus long"
+-- retenait ce dernier à longueur égale, d'où des doublons de villes
+-- ("Levallois Perret" / "Levallois-Perret") ; initcap déformait aussi les noms
+-- officiels ("Aix-en-Provence" -> "Aix-En-Provence").
 ville_dept_region_choisie as (
     select
         b.id,
         b.code_commune,
         b.code_departement,
-        case
-            when b.nom_ville is null then null
-            when b.nom_ville is not null
-                and (
-                    lower(b.ville) = lower(b.nom_ville)
-                    or length(b.ville) >= length(b.nom_ville)
-                )
-                then initcap(b.ville)
-            when length(b.ville) < length(b.nom_ville)
-                then initcap(b.nom_ville)
-            else null
-        end as ville_choisie,
+        b.nom_ville as ville_choisie,
         srd.nom_departement,
         srd.nom_region
     from base as b

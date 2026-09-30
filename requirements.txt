@@ -10,3 +10,9 @@ python-dotenv==1.2.2
 
 #Google Cloud Storage
 google-cloud-storage==3.10.1
+
+#Google BigQuery
+google-cloud-bigquery==3.43.0
+
+#Airflow - opérateurs Google (GCSToBigQueryOperator)
+apache-airflow-providers-google==22.5.0

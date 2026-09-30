@@ -1,0 +1,65 @@
+# API FastAPI + app Streamlit. Airflow tourne à part, via `astro dev start`.
+# Les deux piles ne se parlent pas directement : Airflow écrit les offres dans
+# BigQuery, l'API les lit et y écrit les profils clients.
+#
+#     docker compose -f compose.app.yml up --build -d
+#
+# Le `-f` est obligatoire : sans lui, Compose chercherait un docker-compose.yml
+# et fusionnerait automatiquement docker-compose.override.yml, qui appartient à
+# Astro (services Airflow sans image).
+#
+# - App :  http://localhost:8501
+# - API :  http://127.0.0.1:8000/docs — publiée sur la boucle locale uniquement
+#          (debug) ; Streamlit la joint par le réseau interne (http://api:8000).
+#
+# Variables lues dans le .env racine (interpolation Compose) : GCP_PROJECT_ID,
+# BIGQUERY_DATASET, et optionnellement CV_BUCKET_NAME. Le reste du .env
+# (secrets France Travail, WTTJ...) n'est volontairement pas transmis.
+
+name: job-market-app
+
+services:
+  api:
+    build: ./api
+    environment:
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:?GCP_PROJECT_ID manquant dans .env}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:?BIGQUERY_DATASET manquant dans .env}
+      CV_BUCKET_NAME: ${CV_BUCKET_NAME:-job-market-cv-uploads}
+      # Chemin du fichier TEL QUE MONTÉ dans le conteneur (volume ci-dessous),
+      # pas celui de la machine hôte écrit dans le .env.
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/credentials.json
+    volumes:
+      # Seul conteneur à détenir les identifiants GCP : droits requis sur le
+      # compte de service — BigQuery Data Editor + Job User, Storage Object
+      # Creator (bucket des CV), Vertex AI User.
+      # create_host_path: false — si ./credentials.json manque, Compose refuse de
+      # démarrer. Par défaut (syntaxe courte comme longue), Docker crée à la place
+      # un DOSSIER vide appartenant à root : API "healthy" mais toutes les requêtes
+      # en 503, et ce dossier bloque ensuite le cp du vrai fichier.
+      - type: bind
+        source: ./credentials.json
+        target: /secrets/credentials.json
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  streamlit:
+    build: ./streamlit-app
+    environment:
+      # Nom du service Docker, résolu sur le réseau interne de ce projet Compose.
+      API_BASE_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

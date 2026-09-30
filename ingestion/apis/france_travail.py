@@ -16,6 +16,10 @@ CLIENT_ID = os.getenv("FRANCE_TRAVAIL_CLIENT_ID")
 CLIENT_SECRET = os.getenv("FRANCE_TRAVAIL_CLIENT_SECRET")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"
+API_BASE_URL = "https://api.francetravail.io/partenaire/offresdemploi"
+PAGE_SIZE = 150
+MAX_RANGE = 3000  # limite de pagination imposée par l'API France Travail
+REQUEST_TIMEOUT = 30
 
 def get_access_token():
     # Récuperer un access token OAuth2 (Client Credentials)
@@ -26,7 +30,8 @@ def get_access_token():
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "scope": "o2dsoffre api_offresdemploiv2"
-        }
+        },
+        timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
     token_data = response.json()
@@ -48,17 +53,17 @@ def make_france_travail_api_call(token_info, endpoint, offset, min_date_str, max
 
 
     response = requests.get(
-        f"https://api.francetravail.io/partenaire/offresdemploi{endpoint}",
+        f"{API_BASE_URL}{endpoint}",
         headers = headers,
-        params = querystring
+        params = querystring,
+        timeout=REQUEST_TIMEOUT,
     )
 
     if response.status_code == 204:  # No Content = plus de résultats
         return {"resultats": None, "content-range": None}
 
     if not response.ok:  # 4xx ou 5xx
-        logger.warning(f"Erreur API [{response.status_code}] sur range {offset}: {response.text[:200]}")
-        return {"resultats": None, "content-range": None}
+        raise RuntimeError(f"Erreur API [{response.status_code}] sur range {offset}: {response.text[:200]}")
 
     return {
         "resultats": response.json().get("resultats"),
@@ -76,7 +81,7 @@ def fetch_jobs(target_date):
     offres = []
 
     # Premier appel de l'API
-    data = make_france_travail_api_call(token, "/v2/offres/search", "0-149", min_date_str, max_date_str)
+    data = make_france_travail_api_call(token, "/v2/offres/search", f"0-{PAGE_SIZE - 1}", min_date_str, max_date_str)
 
     if not data.get("resultats"):
         logger.info("Aucune offre trouvée pour cette journée")
@@ -92,9 +97,9 @@ def fetch_jobs(target_date):
     d = int(match.group(2))
     t = int(match.group(3))
 
-    while p < t and p <= 3000:
-        p += 150
-        d += 150
+    while p < t and p <= MAX_RANGE:
+        p += PAGE_SIZE
+        d += PAGE_SIZE
         data = make_france_travail_api_call(token, "/v2/offres/search", f"{p}-{d}", min_date_str, max_date_str)
         if not data.get("resultats") or not data.get("content-range"):
             break
@@ -117,7 +122,7 @@ def upload_to_gcs(bucket_name, data, target_date):
 
     if not data:
         logger.info("Aucune donnée à uploader")
-        return
+        return None
 
     # Définir le nom du fichier à uploader
     date_str = target_date.strftime("%Y-%m-%d")
@@ -148,6 +153,8 @@ def upload_to_gcs(bucket_name, data, target_date):
     )
 
     logger.info(f"{len(data)} offres uploadées vers gs://{bucket_name}/{blob_name}")
+
+    return f"gs://{bucket_name}/{blob_name}"
 
 def run():
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
