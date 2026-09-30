@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from google.cloud import bigquery
+from google.oauth2 import service_account
 
 from api.core.config import get_settings
 
@@ -26,9 +27,16 @@ def get_client() -> bigquery.Client:
     global _client
     if _client is None:
         settings = get_settings()
-        _client = bigquery.Client(project=settings.bq_project_id)
+        credentials = None
+        if settings.google_application_credentials:
+            credentials = service_account.Credentials.from_service_account_file(
+                settings.google_application_credentials
+            )
+        _client = bigquery.Client(
+            project=settings.bq_project_id,
+            credentials=credentials,
+        )
     return _client
-
 
 def run_query(
     sql: str,
