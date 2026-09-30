@@ -32,7 +32,13 @@ services:
       # Seul conteneur à détenir les identifiants GCP : droits requis sur le
       # compte de service — BigQuery Data Editor + Job User, Storage Object
       # Creator (bucket des CV), Vertex AI User.
-      - ./credentials.json:/secrets/credentials.json:ro
+      # Syntaxe longue : si ./credentials.json manque, Compose refuse de démarrer.
+      # (La syntaxe courte créerait à la place un DOSSIER vide : API "healthy"
+      # mais toutes les requêtes en 503, et un dossier root qui bloque le cp.)
+      - type: bind
+        source: ./credentials.json
+        target: /secrets/credentials.json
+        read_only: true
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

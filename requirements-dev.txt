@@ -1,0 +1,7 @@
+# Environnement de développement et de tests de l'API et de l'app Streamlit :
+#     pip install -r requirements-dev.txt
+#     pytest tests/test_api_recommandation.py tests/test_streamlit_app.py
+# (le requirements.txt racine est réservé à l'image Airflow/Astro)
+-r api/requirements.txt
+-r streamlit-app/requirements.txt
+pytest==9.0.2
