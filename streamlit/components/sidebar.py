@@ -35,7 +35,7 @@ def render_sidebar() -> dict:
     if not regions:
         api_unreachable = True
 
-    region = st.sidebar.selectbox("Région", ["Toutes"] + regions)
+    region = st.sidebar.multiselect("Région", ["Toutes"] + regions)
     region_filter = None if region == "Toutes" else region
 
     # Les départements ne sont proposés qu'une fois une région choisie, pour
@@ -43,19 +43,19 @@ def render_sidebar() -> dict:
     departement_filter = None
     if region_filter:
         departements = _safe_labels(get_departements, {"region": region_filter})
-        departement = st.sidebar.selectbox("Département", ["Tous"] + departements)
+        departement = st.sidebar.multiselect("Département", ["Tous"] + departements)
         departement_filter = None if departement == "Tous" else departement
 
     secteurs = _safe_labels(get_secteurs_repartition, {})
-    secteur = st.sidebar.selectbox("Secteur", ["Tous"] + secteurs)
+    secteur = st.sidebar.multiselect("Secteur", ["Tous"] + secteurs)
     secteur_filter = None if secteur == "Tous" else secteur
 
     metiers = _safe_labels(get_metiers_repartition, {}, limit=100)
-    metier = st.sidebar.selectbox("Métier", ["Tous"] + metiers)
+    metier = st.sidebar.multiselect("Métier", ["Tous"] + metiers)
     metier_filter = None if metier == "Tous" else metier
 
     contrats = _safe_labels(get_contrats_repartition, {})
-    contrat = st.sidebar.selectbox("Type de contrat", ["Tous"] + contrats)
+    contrat = st.sidebar.multiselect("Type de contrat", ["Tous"] + contrats)
     contrat_filter = None if contrat == "Tous" else contrat
 
     try:
@@ -66,10 +66,10 @@ def render_sidebar() -> dict:
         formations, experiences = [], []
         api_unreachable = True
 
-    formation = st.sidebar.selectbox("Niveau de formation", ["Tous"] + formations)
+    formation = st.sidebar.multiselect("Niveau de formation", ["Tous"] + formations)
     formation_filter = None if formation == "Tous" else formation
 
-    experience = st.sidebar.selectbox("Niveau d'expérience", ["Tous"] + experiences)
+    experience = st.sidebar.multiselect("Niveau d'expérience", ["Tous"] + experiences)
     experience_filter = None if experience == "Tous" else experience
 
     st.sidebar.subheader("Période")

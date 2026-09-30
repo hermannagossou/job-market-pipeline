@@ -40,7 +40,7 @@ def get_client() -> bigquery.Client:
 
 def run_query(
     sql: str,
-    params: list[bigquery.ScalarQueryParameter] | None = None,
+    params: list[bigquery.ScalarQueryParameter | bigquery.ArrayQueryParameter] | None = None,
 ) -> list[dict]:
     """Exécute une requête paramétrée et retourne les lignes sous forme de liste de dicts.
 
