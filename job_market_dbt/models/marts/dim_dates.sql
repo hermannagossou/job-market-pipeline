@@ -2,7 +2,7 @@
 -- Clé : id_date (surrogate key sur date_publication)
 
 with source as (
-    select * from {{ ref('int_offres') }}
+    select * from {{ ref('int_offres_niveau_experience_titre') }}
 )
 
 select distinct

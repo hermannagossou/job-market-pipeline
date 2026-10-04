@@ -8,7 +8,7 @@
 -- seeds/mapping_rang_formation.csv pour le mapping texte -> rang.
 
 with source as (
-    select * from {{ ref('int_offres') }}
+    select * from {{ ref('int_offres_niveau_experience_titre') }}
 ),
 
 distinct_niveaux as (

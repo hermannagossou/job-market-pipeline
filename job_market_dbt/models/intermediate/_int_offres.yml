@@ -85,11 +85,40 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
       - name: nbre_postes
         description: "Nombre de postes à pourvoir"
         data_tests:
           - not_null
+
+  - name: int_offres_niveau_experience_titre
+    description: >
+      Version finale de int_offres lue par les marts : niveaux de formation et
+      d'expérience complétés par Gemini (int_offres_enrichissement_ia, offres WTTJ)
+      puis, pour l'expérience, par les mots-clés de l'intitulé en dernier repli.
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau_formation
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
+      - name: niveau_experience
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
+      - name: niveau_experience_source
+        description: "Origine du niveau d'expérience : structure_ou_ia_texte, titre_intitule, ou NULL si inconnu"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['structure_ou_ia_texte', 'titre_intitule']
 
   - name: int_offres_competences
     description: "{{ doc('int_offres_competences') }}"
@@ -112,7 +141,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
 
   - name: int_offres_langues
     description: "{{ doc('int_offres_langues') }}"
@@ -144,4 +173,4 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']

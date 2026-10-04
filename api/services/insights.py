@@ -98,12 +98,12 @@ def get_comparaison_plateformes(
     SELECT
         {column} AS label,
         COUNTIF(f.nom_plateforme = 'France Travail') AS france_travail,
-        COUNTIF(f.nom_plateforme = 'Welcome To The Jungle') AS wttj
+        COUNTIF(f.nom_plateforme = 'Welcome to the Jungle') AS wttj
     {base_from_clause()}
     {where_sql}
     GROUP BY {column}
     ORDER BY (COUNTIF(f.nom_plateforme = 'France Travail')
-              + COUNTIF(f.nom_plateforme = 'Welcome To The Jungle')) DESC
+              + COUNTIF(f.nom_plateforme = 'Welcome to the Jungle')) DESC
     LIMIT {int(limit)}
     """
     rows = run_query(sql, params)

@@ -8,7 +8,7 @@ with source as (
     select
         *,
         {{ normalize_ville('ville') }} as ville_normalisee
-    from {{ ref('int_offres') }}
+    from {{ ref('int_offres_niveau_experience_titre') }}
 )
 
 select distinct

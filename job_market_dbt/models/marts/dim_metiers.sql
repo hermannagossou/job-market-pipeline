@@ -2,7 +2,7 @@
 -- Clé : id_metier (surrogate key sur nom_metier)
 
 with source as (
-    select * from {{ ref('int_offres') }}
+    select * from {{ ref('int_offres_niveau_experience_titre') }}
 )
 
 select distinct
