@@ -1,6 +1,5 @@
 -- Point d'union multi-sources pour les compétences.
--- Actuellement : France Travail uniquement. WTTJ sera ajouté via UNION ALL ici.
--- Source  : int_france_travail_offres_competences (et futurs équivalents par plateforme)
+-- Source  : int_france_travail_offres_competences + int_wttj_offres_competences
 -- Sortie  : tous les couples (offre, compétence) toutes plateformes confondues.
 
 with source_france_travail as (
@@ -8,8 +7,15 @@ with source_france_travail as (
 
 ),
 
+source_wttj as (
+    select * from {{ ref('int_wttj_offres_competences') }}
+
+),
+
 int_offres_combinees as (
     select * from source_france_travail
+    union all
+    select * from source_wttj
 )
 
 select id, competence, nom_plateforme from int_offres_combinees

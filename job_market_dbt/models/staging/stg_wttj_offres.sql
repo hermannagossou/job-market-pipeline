@@ -43,6 +43,14 @@ colonnes_utiles as (
                 )
         ) as date_publication,
         trim(json_value(data, '$.summary')) as description,
+        -- Pas d'URL dans la donnée Algolia : reconstruite depuis les slugs, au
+        -- format des pages offres du site.
+        concat(
+            'https://www.welcometothejungle.com/fr/companies/',
+            json_value(data, '$.organization.slug'),
+            '/jobs/',
+            json_value(data, '$.slug')
+        ) as lien_offre,
         json_query(data, '$.key_missions') as missions_cles,
         'Welcome to the Jungle' as nom_plateforme,
         1 as nbre_postes
