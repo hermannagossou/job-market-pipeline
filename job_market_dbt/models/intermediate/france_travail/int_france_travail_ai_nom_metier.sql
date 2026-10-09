@@ -37,38 +37,56 @@ with source as (
     {% if is_incremental() %}
     and id not in (select id from {{ this }})
     {% endif %}
-)
+),
 
-select
-    id,
-    initcap(trim(result)) as nom_metier
-from ai.generate_text(
-    model `prod.gemini_model`,
-    (
-        select
-            concat(
-                """
-                Tu es un expert RH spécialisé dans les métiers de la Data.
-                Classifie cette offre d'emploi dans UNE des catégories suivantes :
+classification as (
+    select
+        id,
+        initcap(trim(result)) as nom_metier_brut
+    from ai.generate_text(
+        model `prod.gemini_model`,
+        (
+            select
+                concat(
+                    """
+                    Tu es un expert RH spécialisé dans les métiers de la Data.
+                    Classifie cette offre d'emploi dans UNE des catégories suivantes :
 
-                {% for metier in liste_noms_metier %}
-                - {{ metier | title }}
-                {% endfor %}
-                - Non Renseigné (si l'offre n'est PAS un métier de la data)
+                    {% for metier in liste_noms_metier %}
+                    - {{ metier | title }}
+                    {% endfor %}
+                    - Non Renseigné (si l'offre n'est PAS un métier de la data)
 
-                Règles :
-                1. Réponds avec SEULEMENT le nom de la catégorie, rien d'autre.
-                2. Pas de guillemets, pas de ponctuation, pas de phrase.
-                3. Si l'offre ne concerne pas la data, réponds exactement : Non Renseigné
+                    Règles :
+                    1. Réponds avec SEULEMENT le nom de la catégorie, rien d'autre.
+                    2. Pas de guillemets, pas de ponctuation, pas de phrase.
+                    3. Si l'offre ne concerne pas la data, réponds exactement : Non Renseigné
 
-                Description (extrait) :
-                """, substr(description, 1, 1500)
-            ) as prompt,
-            id
-        from source
-    ),
-    struct(
-        0.2 as temperature,
-        40 as max_output_tokens
+                    Description (extrait) :
+                    """, substr(description, 1, 1500)
+                ) as prompt,
+                id
+            from source
+        ),
+        struct(
+            0.2 as temperature,
+            40 as max_output_tokens
+        )
     )
 )
+
+-- Filet de sécurité : Gemini ne respecte pas toujours strictement la consigne
+-- (ex. paraphrase du titre au lieu d'une catégorie de la liste). On force alors
+-- "Non Renseigné" plutôt que de laisser passer une valeur hors périmètre.
+select
+    id,
+    case
+        when lower(nom_metier_brut) in (
+            {%- for metier in liste_noms_metier %}
+            '{{ metier }}'{{ "," if not loop.last }}
+            {%- endfor %}
+        )
+        then nom_metier_brut
+        else 'Non Renseigné'
+    end as nom_metier
+from classification

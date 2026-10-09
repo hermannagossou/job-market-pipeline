@@ -18,6 +18,7 @@ colonnes_utiles as (
         trim(json_value(data, '$.experienceLibelle')) as niveau_experience,
         json_query(data, '$.langues') as langues,
         trim(json_value(data, '$.entreprise.nom')) as nom_entreprise,
+        trim(json_value(data, '$.origineOffre.urlOrigine')) as lien_offre,
         case
             when length(json_value(data, '$.lieuTravail.commune')) = 4
             then trim(
@@ -60,6 +61,19 @@ colonnes_utiles as (
             trim(json_value(data, '$.nombrePostes')) as int64
         ) as nbre_postes
     from source
+),
+
+-- Dédoublonnage : la même annonce peut ressortir sur plusieurs exécutions
+-- successives de l'ingestion tant qu'elle reste active (elle repasse dans
+-- les résultats de recherche de l'API), et raw_france_travail_offres n'est
+-- pas dédupliquée à l'insertion. Sans ce filtre, id_offre (calculé en aval
+-- sur id + nom_plateforme) produit deux lignes identiques dans fact_offres
+-- pour la même annonce -- cas confirmé sur "Data Engineer -- REXEL FRANCE",
+-- vu en double dans les recommandations de deux profils différents.
+dedoublonnees as (
+    select *
+    from colonnes_utiles
+    qualify row_number() over (partition by id order by date_publication desc) = 1
 )
 
-select * from colonnes_utiles
+select * from dedoublonnees

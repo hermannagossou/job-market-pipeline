@@ -97,7 +97,8 @@ select
     sec.nom_secteur,
     b.date_publication,
     b.nom_plateforme,
-    b.nbre_postes
+    b.nbre_postes,
+    b.lien_offre
 from base as b
 left join nom_metier as nm on b.id = nm.id
 left join entreprise as e on b.id = e.id
