@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from components.theme import apply_plotly_theme
@@ -126,8 +127,19 @@ def choropleth(
         labels={value_key: value_label},
         title=title,
     )
+
     if hover_format:
         fig.update_traces(hovertemplate="%{location}<br>" + value_label + " : %{z:" + hover_format + "}<extra></extra>")
+
+    # Fond : toutes les zones du GeoJSON en gris clair (avec contour), sous les données
+    noms = [f["properties"]["nom"] for f in geojson["features"]]
+    fig.add_trace(go.Choropleth(
+        geojson=geojson, locations=noms, featureidkey="properties.nom",
+        z=[0] * len(noms), colorscale=[[0, "#E5E7EB"], [1, "#E5E7EB"]],
+        showscale=False, marker_line_width=0.5, hoverinfo="skip",
+    ))
+    fig.data = (fig.data[-1],) + fig.data[:-1]  # le fond passe sous les données
+
     fig.update_geos(fitbounds="locations", visible=False)
     fig = apply_plotly_theme(fig, height=520)
     fig.update_layout(margin=dict(l=0, r=0, t=48, b=0))
