@@ -28,8 +28,8 @@ def apply_plotly_theme(fig, height: int = 400):
         margin=dict(l=10, r=10, t=48, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="sans-serif", size=13, color="#0F172A"),
-        title_font=dict(size=16, color="#0F172A"),
+        font=dict(family="sans-serif", size=13),
+        title_font=dict(size=16),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     fig.update_xaxes(showgrid=True, gridcolor="#E2E8F0", zeroline=False)
