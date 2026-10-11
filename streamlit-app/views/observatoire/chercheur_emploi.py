@@ -34,6 +34,7 @@ with st.spinner("Chargement…"):
         profil = get_profil_repartition(filters)
         salaires = get_salaires_metiers(filters, limit=15)
         salaires_comp = get_salaires_competences(filters, limit=15)
+        salaires_comp_nuage = get_salaires_competences(filters, limit=30)
     except ApiError as exc:
         st.error(f"Erreur lors du chargement : {exc}")
         st.stop()
@@ -82,6 +83,25 @@ charts.salaire_range(salaires, "Fourchettes salariales par métier")
 st.subheader("💡 Quelles compétences rapportent le plus ?")
 st.caption("Salaire moyen et médian des offres demandant chaque compétence (min. 3 offres).")
 charts.salaire_bar(salaires_comp, "Salaire par compétence", label_key="competence", top_n=15)
+
+st.subheader("🧭 Quelles compétences cumulent demande et salaire ?")
+st.caption("Chaque point est une compétence : plus il est à droite, plus elle est demandée ; plus il est haut, mieux elle est payée.")
+charts.competence_quadrant(salaires_comp_nuage, "Demande et salaire par compétence")
+
+with st.expander("📖 Comment lire ce graphique ?"):
+    st.markdown(
+        """
+        Les deux lignes pointillées marquent la **médiane** de l'échantillon affiché.
+        Elles découpent le graphique en 4 zones :
+
+        - **En haut à droite** : très demandées et bien payées, les plus stratégiques à développer.
+        - **En haut à gauche** : peu demandées mais bien payées, des compétences de niche.
+        - **En bas à droite** : très demandées mais salaire plus bas, des compétences « de base ».
+        - **En bas à gauche** : ni très demandées, ni particulièrement rémunératrices.
+
+        ⚠️ Ces repères sont **relatifs à l'échantillon affiché**, pas des seuils absolus du marché.
+        """
+    )
 
 # --- Profil attendu ----------------------------------------------------------
 st.subheader("🎯 Quel profil est attendu ?")
