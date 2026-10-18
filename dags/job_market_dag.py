@@ -38,7 +38,12 @@ DBT_PROFILES_DIR = PROJECT_ROOT / "include" / "dbt"
 @dag(
     dag_id="job_market_dag",
     schedule="@daily",
-    start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
+    # 28/09/2026 : les offres publiées du 01/09 au 27/09 sont déjà en prod (rattrapage
+    # du 27/09). Une nouvelle installation (base Airflow vierge, ex. la VM) ne rattrape
+    # donc que les jours manquants. Remonter plus tôt n'apporte rien : les API ne
+    # renvoient que les offres encore en ligne (0 offre pour janvier-mai, mesuré le 18/10),
+    # et chaque run rejoue un dbt build complet.
+    start_date=pendulum.datetime(2026, 9, 28, tz="UTC"),
     catchup=True,
     max_active_runs=1,  # backfill séquentiel : évite de saturer la machine locale (RAM/CPU)
     default_args={
