@@ -1,54 +1,59 @@
--- Détection des quasi-doublons intra-plateforme (même offre republiée sous un id
--- différent), pour une gestion pérenne au fil des runs quotidiens.
--- Source  : int_offres
--- Sortie  : une ligne par offre, enrichie d'un id_groupe_doublon, d'un compteur
---           d'annonces similaires et d'un rang dans le groupe.
+-- Dédoublonnage des offres (même annonce republiée sous un autre id), dernière
+-- étape avant les marts.
+-- Source  : int_offres + intitulé / description bruts (int_*_merge_ville)
+-- Sortie  : les 17 colonnes de int_offres + nb_annonces_similaires, UNE LIGNE PAR
+--           GROUPE DE DOUBLONS (la première annonce publiée est conservée).
 --
--- Ne dédupliquer JAMAIS les lignes où nom_entreprise = 'Non Renseigné' (ou NULL) :
--- observé en test que deux offres réellement DIFFÉRENTES d'employeurs anonymes
--- distincts peuvent coïncider par hasard sur ville/métier/salaire (surtout sur des
--- salaires imputés par médiane, cf. limite ci-dessous). Chaque ligne à entreprise
--- inconnue reste donc son propre groupe, jamais fusionnée avec une autre.
+-- Fait après l'union : c'est le seul endroit où les annonces des deux plateformes
+-- peuvent être rapprochées.
 --
--- Recalculé sur TOUT l'historique à chaque run (pas de logique incrémentale) : une
--- offre republiée à J+15 (cas observé : Sopra Steria/Nantes, 06/06 puis 19/06) ne
--- serait pas rapprochée de l'originale si seul le lot du jour était comparé.
+-- Règle : même entreprise, même intitulé, même ville, même contrat ET description
+-- identique. On préfère laisser passer une republication retouchée plutôt que
+-- faire disparaître une offre réelle. La première empreinte (ville / métier /
+-- contrat / expérience / salaire) regroupait des offres différentes : 231 offres
+-- retirées sur 1 118, dont 223 avec une description différente, surtout à cause
+-- des salaires imputés par médiane, identiques par construction (ex. 30 missions
+-- Collective.work distinctes à 44 000-56 500 € estimés). Une règle floue
+-- (similarité des descriptions) a été écartée : sur les cas « même entreprise,
+-- même titre, même ville, texte différent », les scores des republications et des
+-- offres distinctes se chevauchent (Jaccard 0,4-0,7). À revoir avec plus de volume.
 --
--- CE MODÈLE NE SUPPRIME AUCUNE LIGNE. Le choix de compter les offres en volume brut
--- (count(*)) ou dédupliqué (count(distinct id_groupe_doublon), ou filtrer sur
--- est_premiere_annonce_du_groupe) est laissé à la couche marts/dashboard : les deux
--- lectures ("nombre d'annonces publiées" vs "nombre de postes distincts estimés")
--- sont légitimes selon la question posée, et ce modèle ne tranche pas à leur place.
+-- Entreprise inconnue ('Non Renseigné' ou NULL) : jamais regroupée, deux
+-- employeurs anonymes distincts pouvant coïncider par hasard.
 --
--- LIMITE CONNUE : salaire_min/salaire_max peuvent être des valeurs IMPUTÉES (médiane
--- en cascade, cf. int_wttj_salaire / int_france_travail_salaire), pas déclarées.
--- Deux offres différentes tombées dans la même partition d'imputation reçoivent
--- exactement le même salaire par construction, ce qui peut sur-grouper des offres
--- distinctes comme si elles étaient identiques. Le risque est partiellement mitigé
--- par le fait qu'on requiert AUSSI la même entreprise pour grouper, mais reste réel
--- pour une même entreprise ayant plusieurs postes distincts non-déclarés dans la
--- même ville/métier/contrat/expérience.
+-- Recalculé sur TOUT l'historique à chaque run (pas d'incrémental) : une offre
+-- republiée à J+15 ne serait pas rapprochée de l'originale si seul le lot du jour
+-- était comparé.
 
 with source as (
     select * from {{ ref('int_offres') }}
 ),
 
-fingerprint as (
+textes as (
+    select id, nom_plateforme, intitule, description from {{ ref('int_france_travail_merge_ville') }}
+    union all
+    select id, nom_plateforme, intitule, description from {{ ref('int_wttj_merge_ville') }}
+),
+
+empreintes as (
     select
-        *,
+        s.*,
         case
-            when nom_entreprise is null or nom_entreprise = 'Non Renseigné' then id
+            when s.nom_entreprise is null or s.nom_entreprise = 'Non Renseigné'
+                then concat(s.nom_plateforme, '|', s.id)
             else to_hex(md5(concat(
-                lower(trim(nom_entreprise)), '|',
-                lower(trim(coalesce(ville, ''))), '|',
-                lower(trim(coalesce(nom_metier, ''))), '|',
-                lower(trim(coalesce(type_contrat, ''))), '|',
-                lower(trim(coalesce(niveau_experience, ''))), '|',
-                cast(coalesce(salaire_min, -1) as string), '|',
-                cast(coalesce(salaire_max, -1) as string)
+                {{ normalize_text('s.nom_entreprise') }}, '|',
+                {{ normalize_text("coalesce(t.intitule, '')") }}, '|',
+                {{ normalize_text("coalesce(s.ville, '')") }}, '|',
+                coalesce(s.type_contrat, ''), '|',
+                to_hex(md5(coalesce(t.description, '')))
             )))
         end as id_groupe_doublon
-    from source
+    from source as s
+    -- Jointure sur id ET plateforme : les identifiants des deux sources ne sont
+    -- pas garantis disjoints.
+    left join textes as t
+        on s.id = t.id and s.nom_plateforme = t.nom_plateforme
 ),
 
 groupes as (
@@ -59,15 +64,11 @@ groupes as (
             partition by id_groupe_doublon
             order by date_publication asc, id asc
         ) as rang_dans_groupe
-    from fingerprint
+    from empreintes
 )
 
 select
     id,
-    id_groupe_doublon,
-    nb_annonces_similaires,
-    rang_dans_groupe,
-    rang_dans_groupe = 1 as est_premiere_annonce_du_groupe,
     nom_metier,
     nom_entreprise,
     type_contrat,
@@ -82,5 +83,8 @@ select
     nom_secteur,
     date_publication,
     nom_plateforme,
-    nbre_postes
+    nbre_postes,
+    lien_offre,
+    nb_annonces_similaires
 from groupes
+where rang_dans_groupe = 1

@@ -1,8 +1,11 @@
--- Enrichissement ciblé par LLM de niveau_formation / niveau_experience quand les
--- champs structurés n'ont rien donné (valeur 'Non Renseigné').
--- Source  : int_offres (unifié, les deux plateformes)
+-- Enrichissement ciblé par LLM de niveau_formation / niveau_experience des offres
+-- WTTJ quand les champs structurés n'ont rien donné (valeur 'Non Renseigné').
+-- Source  : int_wttj_ai_niveaux_a_traiter (offres concernées, voir ce modèle)
 -- Sortie  : une ligne par offre traitée, niveau_formation_ia / niveau_experience_ia
 --           (NULL si le LLM n'a rien trouvé d'exploitable non plus).
+--
+-- Fait dans wttj/, avant l'union int_offres, comme l'enrichissement France Travail
+-- (int_france_travail_ai_*) : int_offres ne fait que réunir les sources.
 --
 -- Ne traite QUE les offres qui en ont besoin (niveau_formation OU niveau_experience
 -- = 'Non Renseigné' ET description non vide), pour limiter le coût LLM aux cas
@@ -21,11 +24,8 @@
 --   (ces deux listes DOIVENT rester synchronisées avec int_wttj_niveau_formation,
 --   int_wttj_niveau_experience et leurs équivalents France Travail)
 --
--- Ce modèle ne modifie PAS int_offres. Le résultat est à joindre séparément :
---   coalesce(o.niveau_formation, case when o.niveau_formation='Non Renseigné'
---     then ia.niveau_formation_ia else o.niveau_formation end)
--- (ou plus simplement : ne remplacer que quand la valeur d'origine est
--- 'Non Renseigné', jamais écraser une valeur déjà connue).
+-- Le résultat est réinjecté par int_wttj_offres_enrichies, qui ne remplace que les
+-- valeurs 'Non Renseigné' et n'écrase jamais une valeur déjà connue.
 --
 -- Périmètre : offres WTTJ uniquement. Côté France Travail, int_france_travail_ai_*
 -- interrogent déjà Gemini sur la description complète (formation, expérience...) :
@@ -40,28 +40,15 @@
     )
 }}
 
-with descriptions as (
+with offres_a_enrichir as (
 
-    select id, description from {{ ref('int_wttj_merge_ville') }}
-
-),
-
-offres_a_enrichir as (
-
-    select
-        o.id,
-        o.niveau_formation,
-        o.niveau_experience,
-        o.nom_plateforme,
-        d.description
-    from {{ ref('int_offres') }} as o
-    inner join descriptions as d
-        on o.id = d.id
-    where o.nom_plateforme = 'Welcome to the Jungle'
-        and d.description is not null
-        and (o.niveau_formation = 'Non Renseigné' or o.niveau_experience = 'Non Renseigné')
+    select *
+    from {{ ref('int_wttj_ai_niveaux_a_traiter') }}
     {% if is_incremental() %}
-        and o.id not in (select distinct id from {{ this }})
+    -- Seules les offres avec une réponse exploitable comptent comme traitées : un
+    -- appel en erreur (quota, délai) est retenté au run suivant, et sa ligne
+    -- remplacée (unique_key).
+    where id not in (select id from {{ this }} where reponse_ok)
     {% endif %}
 
 ),
@@ -137,6 +124,7 @@ extraction as (
         nom_plateforme,
         niveau_formation,
         niveau_experience,
+        reponse_brute,
         trim(regexp_extract(reponse_brute, r'FORMATION:\s*(.*)')) as formation_extraite,
         trim(regexp_extract(reponse_brute, r'EXPERIENCE:\s*(.*)')) as experience_extraite,
         trim(regexp_extract(reponse_brute, r'JUSTIFICATION_EXPERIENCE:\s*(.*)')) as justification_experience
@@ -150,12 +138,15 @@ extraction as (
 -- parfois "Senior"/"Junior" depuis le TITRE du poste malgré la consigne, quand
 -- aucune durée réelle n'était mentionnée) : on exige que la justification citée
 -- contienne effectivement un chiffre suivi de "an" (an/ans/année/années), sinon on
--- rejette la réponse même si elle matche le vocabulaire attendu.
+-- rejette la réponse même si elle matche le vocabulaire attendu. Justification
+-- absente (ligne omise, réponse tronquée) : regexp_contains vaut NULL, d'où le
+-- coalesce à false pour que le garde-fou rejette aussi ce cas.
 validation as (
 
     select
         id,
         nom_plateforme,
+        reponse_brute,
         case
             when niveau_formation != 'Non Renseigné' then null
             when formation_extraite in (
@@ -166,12 +157,22 @@ validation as (
         case
             when niveau_experience != 'Non Renseigné' then null
             when experience_extraite not in ('Junior', 'Confirmé', 'Senior', 'Expert') then null
-            when not regexp_contains(justification_experience, r'\d+\s*an(?:s|née|nées)?') then null
+            when not coalesce(regexp_contains(justification_experience, r'\d+\s*an(?:s|née|nées)?'), false) then null
             else experience_extraite
         end as niveau_experience_ia
     from extraction
 
 )
 
-select *
+-- Appels en erreur (quota, délai) : reponse_brute NULL, enregistrés avec
+-- reponse_ok = false pour être retentés au run suivant (voir offres_a_enrichir).
+-- Ne PAS filtrer ici sur reponse_brute : BigQuery appliquerait ce filtre dans
+-- l'étape Gemini, avant le filtre incrémental, et rappellerait Gemini sur toutes
+-- les offres à traiter à chaque run (mesuré : 288 appels pour 0 offre nouvelle).
+select
+    id,
+    nom_plateforme,
+    niveau_formation_ia,
+    niveau_experience_ia,
+    reponse_brute is not null as reponse_ok
 from validation

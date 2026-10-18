@@ -59,23 +59,25 @@ salaire_normalise as (
     select
         id,
         case
+            -- 0 = non renseigné, testé en premier : sinon un 0 mensuel donnerait
+            -- 0 x 12 = 0, échapperait à l'imputation et sortirait « Déclaré ».
+            when salaire_min = 0.0 then null
             when salaire_periodicite = 'hourly' then salaire_min * 35 * 52
             when salaire_periodicite = 'daily' then salaire_min * 218
             when salaire_periodicite = 'monthly' and salaire_min <= 10000.0 then salaire_min * 12
             when salaire_periodicite = 'monthly' and salaire_min > 10000.0 then salaire_min
             when salaire_periodicite = 'yearly' and salaire_min > 0.0 and salaire_min <= 300.0 then salaire_min * 1000
             when salaire_periodicite = 'yearly' and salaire_min > 300.0 and salaire_min < 5000.0 then salaire_min * 12
-            when salaire_min = 0.0 then null
             else salaire_min
         end as salaire_min,
         case
+            when salaire_max = 0.0 then null
             when salaire_periodicite = 'hourly' then salaire_max * 35 * 52
             when salaire_periodicite = 'daily' then salaire_max * 218
             when salaire_periodicite = 'monthly' and salaire_max <= 10000.0 then salaire_max * 12
             when salaire_periodicite = 'monthly' and salaire_max > 10000.0 then salaire_max
             when salaire_periodicite = 'yearly' and salaire_max > 0.0 and salaire_max <= 300.0 then salaire_max * 1000
             when salaire_periodicite = 'yearly' and salaire_max > 300.0 and salaire_max < 5000.0 then salaire_max * 12
-            when salaire_max = 0.0 then null
             else salaire_max
         end as salaire_max
     from base

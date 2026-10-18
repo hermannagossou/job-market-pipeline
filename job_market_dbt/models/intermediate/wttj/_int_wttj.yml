@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: int_wttj_ai_niveaux_a_traiter
+    description: Offres WTTJ à formation ou expérience inconnue, à envoyer à Gemini.
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_wttj_ai_niveaux
+    description: Niveaux de formation / expérience extraits par Gemini (une ligne par offre traitée).
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau_formation_ia
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat']
+      - name: niveau_experience_ia
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Junior', 'Confirmé', 'Senior', 'Expert']
+      - name: reponse_ok
+        description: Faux si l'appel Gemini a échoué (quota, délai) ; l'offre sera retentée au run suivant.
+        data_tests:
+          - not_null
+
+  - name: int_wttj_offres_enrichies
+    description: Offres WTTJ avec niveaux complétés (structuré > Gemini > intitulé), entrée WTTJ de int_offres.
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+      - name: niveau_formation
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
+      - name: niveau_experience
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
+
+  - name: int_wttj_reponses_competences
+    description: Réponse brute de Gemini pour les compétences, une ligne par offre WTTJ traitée.
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null

@@ -1,5 +1,5 @@
 -- Point d'union multi-sources pour les offres.
--- Source  : int_france_travail_offres + int_wttj_offres
+-- Source  : int_france_travail_offres + int_wttj_offres_enrichies
 -- Sortie  : toutes les offres toutes plateformes confondues, schéma unifié.
 
 with source_france_travail as (
@@ -8,7 +8,7 @@ with source_france_travail as (
 ),
 
 source_wttj as (
-    select * from {{ ref('int_wttj_offres') }}
+    select * from {{ ref('int_wttj_offres_enrichies') }}
 
 ),
 

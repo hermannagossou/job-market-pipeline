@@ -24,8 +24,10 @@ int_wttj_dedup as (
 ),
 
 -- Un seul site retenu par offre : on ne garde que les bureaux réels (ville
--- renseignée) et on prend le premier par ordre alphabétique pour rester
--- déterministe d'un run à l'autre.
+-- renseignée), bureaux en France d'abord, puis le premier par ordre alphabétique
+-- pour rester déterministe d'un run à l'autre. Sans la priorité France, une offre
+-- avec un bureau à London ou Casablanca et un autre en France perdait sa ville
+-- française et était écartée faute de département (int_wttj_offres).
 office_principal as (
     select
         id,
@@ -43,7 +45,9 @@ office_principal as (
     where json_value(office, '$.city') is not null
     qualify row_number() over (
         partition by id
-        order by json_value(office, '$.city')
+        order by
+            if(json_value(office, '$.country_code') = 'FR', 0, 1),
+            json_value(office, '$.city')
     ) = 1
 )
 
