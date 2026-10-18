@@ -51,7 +51,10 @@ job-market-venv/
 # Claude
 .claude/
 # Astro
-.astro/
+# Astro : seul config.yaml (nom du projet, sans secret) est versionné, pour qu'un
+# nouveau clone (ex. la VM) soit reconnu par `astro dev start`.
+.astro/*
+!.astro/config.yaml
 
 # Fonds de carte de l'observatoire (régénérables via streamlit-app/scripts/download_geojson.py)
 streamlit-app/assets/*.geojson
