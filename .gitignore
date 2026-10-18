@@ -25,6 +25,8 @@ build/
 target/
 dbt_packages/
 logs/
+# Identifiant anonyme de télémétrie, généré par dbt à côté de profiles.yml
+.user.yml
 
 # Airflow
 airflow/logs/

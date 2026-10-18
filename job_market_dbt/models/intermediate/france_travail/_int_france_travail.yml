@@ -306,7 +306,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
       - name: nbre_postes
         description: "Nombre de postes à pourvoir"
         data_tests:
@@ -333,7 +333,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
 
   - name: int_france_travail_ai_langues
     description: "{{ doc('int_france_travail_ai_langues') }}"
@@ -378,4 +378,4 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']

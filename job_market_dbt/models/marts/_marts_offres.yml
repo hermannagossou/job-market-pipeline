@@ -276,7 +276,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
       - name: salaire_min
         description: "Salaire minimum annuel brut en euros"
         data_tests:

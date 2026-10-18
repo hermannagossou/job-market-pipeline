@@ -85,9 +85,25 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
       - name: nbre_postes
         description: "Nombre de postes à pourvoir"
+        data_tests:
+          - not_null
+
+  - name: int_offres_doublons
+    description: >
+      Offres dédoublonnées (une ligne par groupe d'annonces identiques), lues par
+      fact_offres et les dimensions.
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+      - name: lien_offre
+        data_tests:
+          - not_null
+      - name: nb_annonces_similaires
         data_tests:
           - not_null
 
@@ -112,7 +128,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']
 
   - name: int_offres_langues
     description: "{{ doc('int_offres_langues') }}"
@@ -144,4 +160,4 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['France Travail', 'Welcome To The Jungle']
+                values: ['France Travail', 'Welcome to the Jungle']

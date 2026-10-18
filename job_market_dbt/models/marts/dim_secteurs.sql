@@ -2,7 +2,7 @@
 -- Clé : id_secteur (surrogate key sur nom_secteur)
 
 with source as (
-    select * from {{ ref('int_offres') }}
+    select * from {{ ref('int_offres_doublons') }}
 )
 
 select distinct
