@@ -34,7 +34,7 @@ with st.spinner("Chargement…"):
         profil = get_profil_repartition(filters)
         salaires = get_salaires_metiers(filters, limit=15)
         salaires_comp = get_salaires_competences(filters, limit=15)
-        salaires_comp_nuage = get_salaires_competences(filters, limit=30)
+        salaires_comp_nuage = get_salaires_competences(filters, limit=30, tri="demande")
     except ApiError as exc:
         st.error(f"Erreur lors du chargement : {exc}")
         st.stop()
@@ -91,7 +91,7 @@ charts.competence_quadrant(salaires_comp_nuage, "Demande et salaire par compéte
 with st.expander("📖 Comment lire ce graphique ?"):
     st.markdown(
         """
-        Les deux lignes pointillées marquent la **médiane** de l'échantillon affiché.
+        Le graphique montre les 30 compétences les plus demandées. Les deux lignes pointillées marquent la médiane de cet échantillon.
         Elles découpent le graphique en 4 zones :
 
         - **En haut à droite** : très demandées et bien payées, les plus stratégiques à développer.
