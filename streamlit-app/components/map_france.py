@@ -78,6 +78,7 @@ def choropleth(
     value_label: str = "Offres",
     color_scale: list[str] | None = None,
     hover_format: str | None = None,
+    fond_toutes_zones: bool = True,
 ) -> bool:
     """Affiche une carte choroplèthe.
 
@@ -131,14 +132,17 @@ def choropleth(
     if hover_format:
         fig.update_traces(hovertemplate="%{location}<br>" + value_label + " : %{z:" + hover_format + "}<extra></extra>")
 
-    # Fond : toutes les zones du GeoJSON en gris clair (avec contour), sous les données
-    noms = [f["properties"]["nom"] for f in geojson["features"]]
-    fig.add_trace(go.Choropleth(
-        geojson=geojson, locations=noms, featureidkey="properties.nom",
-        z=[0] * len(noms), colorscale=[[0, "#E5E7EB"], [1, "#E5E7EB"]],
-        showscale=False, marker_line_width=0.5, hoverinfo="skip",
-    ))
-    fig.data = (fig.data[-1],) + fig.data[:-1]  # le fond passe sous les données
+    # Fond : toutes les zones du GeoJSON en gris clair (avec contour), sous les données.
+    # Désactivable pour une vue zoomée sur une région : fitbounds="locations" cadre la
+    # carte sur TOUTES les zones visibles, fond compris, ce qui annulerait le zoom.
+    if fond_toutes_zones:
+        noms = [f["properties"]["nom"] for f in geojson["features"]]
+        fig.add_trace(go.Choropleth(
+            geojson=geojson, locations=noms, featureidkey="properties.nom",
+            z=[0] * len(noms), colorscale=[[0, "#E5E7EB"], [1, "#E5E7EB"]],
+            showscale=False, marker_line_width=0.5, hoverinfo="skip",
+        ))
+        fig.data = (fig.data[-1],) + fig.data[:-1]  # le fond passe sous les données
 
     fig.update_geos(fitbounds="locations", visible=False)
     fig = apply_plotly_theme(fig, height=520)
