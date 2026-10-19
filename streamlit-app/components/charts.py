@@ -70,7 +70,7 @@ def evolution(points: list[dict], title: str, color: str = PRIMARY) -> None:
     st.markdown(f"**{title}**")
     fig = apply_plotly_theme(fig, height=360)
     fig.update_layout(title_text="")
-    st.plotly_chart(apply_plotly_theme(fig, height=360), width="stretch")
+    st.plotly_chart(fig, width="stretch")
 
 
 def salaire_range(items: list[dict], title: str) -> None:
