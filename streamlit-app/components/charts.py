@@ -252,6 +252,6 @@ def competence_quadrant(items: list[dict], title: str) -> None:
     fig.update_traces(textposition="top center", marker=dict(size=10))
     if not categorie:
         fig.update_traces(marker_color=PRIMARY)
-    fig.add_hline(y=df["salaire_moyen"].median(), line_dash="dot", line_color="rgba(0,0,0,0.3)")
-    fig.add_vline(x=df["nb_offres"].median(), line_dash="dot", line_color="rgba(0,0,0,0.3)")
+    fig.add_hline(y=df["salaire_moyen"].median(), line_dash="dot", line_color="rgba(128,128,128,0.7)")
+    fig.add_vline(x=df["nb_offres"].median(), line_dash="dot", line_color="rgba(128,128,128,0.7)")
     st.plotly_chart(apply_plotly_theme(fig, height=550), width="stretch")
