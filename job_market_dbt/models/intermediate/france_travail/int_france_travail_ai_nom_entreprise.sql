@@ -12,12 +12,12 @@
     )
 }}
 
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql). Un appel en erreur (réponse NULL)
+-- est retenté au run suivant ; sa ligne est alors remplacée (unique_key).
 with source as (
-    select * from {{ ref('int_france_travail_merge_ville') }}
-
-    {% if is_incremental() %}
-    where id not in (select id from {{ this }})
-    {% endif %}
+    select * from {{ ref('int_france_travail_ai_a_traiter') }}
+    where a_traiter_entreprise
 )
 
 select
@@ -40,7 +40,6 @@ from ai.generate_text(
             ) as prompt,
             id
         from source
-        where nom_entreprise is null
     ),
     struct(
         0.0 as temperature,

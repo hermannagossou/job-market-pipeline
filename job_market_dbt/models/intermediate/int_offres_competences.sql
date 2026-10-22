@@ -29,3 +29,6 @@ offres_conservees as (
 select c.id, c.competence, c.nom_plateforme
 from int_offres_combinees as c
 inner join offres_conservees using (id, nom_plateforme)
+-- 'Non Renseigné' : marqueur « Gemini a répondu, aucune compétence reconnue »
+-- (voir int_france_travail_offres_competences), pas une compétence.
+where c.competence != 'Non Renseigné'

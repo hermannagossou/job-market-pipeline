@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: int_wttj_ai_niveaux_a_traiter
-    description: Offres WTTJ à formation ou expérience inconnue, à envoyer à Gemini.
+    description: Offres WTTJ à formation ou expérience inconnue ; a_traiter = pas encore de réponse exploitable de Gemini.
     columns:
       - name: id
         data_tests:
@@ -50,6 +50,14 @@ models:
           - accepted_values:
               arguments:
                 values: ['Junior', 'Confirmé', 'Senior', 'Expert', 'Non Renseigné']
+
+  - name: int_wttj_competences_a_traiter
+    description: File d'attente de l'extraction des compétences WTTJ par Gemini (texte envoyé et a_traiter).
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
 
   - name: int_wttj_reponses_competences
     description: Réponse brute de Gemini pour les compétences, une ligne par offre WTTJ traitée.

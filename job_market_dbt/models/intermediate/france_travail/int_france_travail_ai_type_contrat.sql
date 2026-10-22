@@ -20,19 +20,22 @@
     )
 }}
 
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql). Un appel en erreur (réponse NULL)
+-- est retenté au run suivant ; sa ligne est alors remplacée (unique_key).
 with source as (
-    select * from {{ ref('int_france_travail_merge_ville') }}
-
-    {% if is_incremental() %}
-    where id not in (select id from {{ this }})
-    {% endif %}
+    select * from {{ ref('int_france_travail_ai_a_traiter') }}
+    where a_traiter_contrat
 )
 
 select
     id,
     -- Mapping explicite plutôt que initcap() : CDI/CDD sont des acronymes qu'initcap()
     -- casserait ("Cdi", "Cdd"). Toute réponse inattendue retombe sur "Non Renseigné".
-    case lower(trim(result))
+    -- NULL (appel en erreur) conservé tel quel : l'offre sera retentée au run suivant.
+    case
+        when result is null then null
+        else case lower(trim(result))
         when 'cdi' then 'CDI'
         when 'cdd' then 'CDD'
         when 'stage' then 'Stage'
@@ -41,6 +44,7 @@ select
         when 'intérim' then 'Intérim'
         when 'interim' then 'Intérim'
         else 'Non Renseigné'
+        end
     end as type_contrat_ia
 from ai.generate_text(
     model `prod.gemini_model`,

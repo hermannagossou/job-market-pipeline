@@ -11,7 +11,8 @@
 
 {{
     config(
-        materialized='table'
+        materialized='table',
+        static_analysis='off'
     )
 }}
 
@@ -20,7 +21,11 @@ select
     o.nom_plateforme,
     o.niveau_formation,
     o.niveau_experience,
-    d.description
+    d.description,
+    -- Déjà traitée = réponse exploitable de Gemini enregistrée ; un appel en erreur
+    -- (quota, délai) est retenté. Calculé ici et pas dans int_wttj_ai_niveaux : voir
+    -- macros/ids_deja_traites.sql.
+    o.id not in {{ ids_deja_traites('int_wttj_ai_niveaux', 'reponse_ok') }} as a_traiter
 from {{ ref('int_wttj_offres') }} as o
 inner join {{ ref('int_wttj_merge_ville') }} as d
     on o.id = d.id

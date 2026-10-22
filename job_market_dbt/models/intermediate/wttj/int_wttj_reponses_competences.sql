@@ -1,5 +1,5 @@
 -- Réponses brutes de Gemini pour l'extraction des compétences WTTJ.
--- Source  : int_wttj_offres (offres validées) + int_wttj_merge_ville + seed competences
+-- Source  : int_wttj_competences_a_traiter (offres validées pas encore traitées) + seed competences
 -- Sortie  : UNE LIGNE PAR OFFRE TRAITÉE, avec la réponse brute (liste CSV).
 --
 -- Séparé de l'extraction (int_wttj_offres_competences) pour que le filtre
@@ -21,40 +21,12 @@
     )
 }}
 
-with offres_validees as (
-    select id
-    from {{ ref('int_wttj_offres') }}
-),
-
-base as (
-    select
-        id,
-        nom_plateforme,
-        concat(
-            coalesce(description, ''), ' ',
-            coalesce(profile, ''), ' ',
-            coalesce(
-                (
-                    select string_agg(json_value(mission), ' ')
-                    from unnest(json_extract_array(missions_cles, '$')) as mission
-                ),
-                ''
-            )
-        ) as description
-    from {{ ref('int_wttj_merge_ville') }}
-),
-
-offres as (
-    select
-        o.id,
-        b.nom_plateforme,
-        b.description
-    from offres_validees as o
-    left join base as b on o.id = b.id
-
-    {% if is_incremental() %}
-    where o.id not in (select distinct id from {{ this }})
-    {% endif %}
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql).
+with offres as (
+    select id, nom_plateforme, description
+    from {{ ref('int_wttj_competences_a_traiter') }}
+    where a_traiter
 ),
 
 -- Une seule ligne : liste complète des compétences depuis le seed, ordre alphabétique.

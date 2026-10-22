@@ -24,6 +24,16 @@
     ]
 %}
 
+{#- Vocabulaire de int_france_travail_ai_nom_secteur après initcap(), identique aux
+    accepted_values des tests (_int_france_travail.yml). -#}
+{%- set secteurs_valides = [
+    'Banque & Finance', 'Assurance', 'Télécommunications', 'Retail & E-Commerce',
+    'Industrie & Manufacturing', 'Santé & Pharmaceutique', 'Conseil & Esn',
+    'Média & Divertissement', 'Logistique & Transport', 'Énergie & Environnement',
+    'Immobilier & Construction', 'Éducation & Recherche', 'Administration Publique',
+    'Startup & Tech', 'Autre'
+] -%}
+
 with base as (
     select * from {{ ref('int_france_travail_merge_ville') }}
 ),
@@ -46,7 +56,9 @@ entreprise_ai as (
 entreprise as (
     select
         a.id,
-        coalesce(a.nom_entreprise, ai.nom_entreprise) as nom_entreprise
+        -- 'Non Renseigné' tant que Gemini n'a pas répondu (appel en erreur, retenté au
+        -- run suivant) : une réponse manquante ne doit pas bloquer toute la chaîne.
+        coalesce(a.nom_entreprise, ai.nom_entreprise, 'Non Renseigné') as nom_entreprise
     from entreprise_api as a
     left join entreprise_ai as ai on a.id = ai.id
 ),
@@ -76,8 +88,20 @@ salaire as (
     from {{ ref('int_france_travail_salaire') }}
 ),
 
+-- Réponse de Gemini hors de la liste (ex. 'Conse', réponse tronquée) ou absente (appel
+-- en erreur, retenté au run suivant) : 'Autre', pour qu'une seule réponse invalide ne
+-- bloque pas toute la chaîne (tests de int_france_travail_offres -> fact_offres).
 secteur as (
-    select id, nom_secteur
+    select
+        id,
+        case
+            when nom_secteur in (
+                {%- for secteur in secteurs_valides %}
+                '{{ secteur }}'{{ "," if not loop.last }}
+                {%- endfor %}
+            ) then nom_secteur
+            else 'Autre'
+        end as nom_secteur
     from {{ ref('int_france_travail_ai_nom_secteur') }}
 )
 
@@ -94,7 +118,7 @@ select
     s.salaire_min,
     s.salaire_max,
     s.statut_salaire,
-    sec.nom_secteur,
+    coalesce(sec.nom_secteur, 'Autre') as nom_secteur,
     b.date_publication,
     b.nom_plateforme,
     b.nbre_postes,

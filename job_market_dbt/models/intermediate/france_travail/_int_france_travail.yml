@@ -1,6 +1,27 @@
 version: 2
 
+# Tests sur les sorties brutes de Gemini (int_france_travail_ai_*) : severity warn.
+# Une réponse manquante (appel en erreur, retenté au run suivant) ou hors vocabulaire
+# est corrigée en aval (repli regex/API, 'Non Renseigné', 'Autre') : elle ne doit pas
+# bloquer int_france_travail_offres, et donc fact_offres et toute l'application.
+
 models:
+  - name: int_france_travail_ai_a_traiter
+    description: "File d'attente des enrichissements Gemini (toutes les offres) : texte envoyé et un drapeau a_traiter_<x> par modèle IA."
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_france_travail_ai_offres_a_traiter
+    description: "File d'attente des enrichissements Gemini des offres retenues (langues, compétences)."
+    columns:
+      - name: id
+        data_tests:
+          - unique
+          - not_null
+
   - name: int_france_travail_merge_ville
     description: "{{ doc('int_france_travail_merge_ville') }}"
     columns:
@@ -40,8 +61,12 @@ models:
       - name: nom_metier
         description: "Métier classifié par Gemini Flash parmi les 13 métiers définis, ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
+              config:
+                severity: warn
               arguments:
                 values: ['Data Engineer', 'Data Analyst', 'Data Scientist', 'Machine Learning Engineer', 'Analytics Engineer', 'Data Architect', 'Business Intelligence Analyst', 'Data Product Manager', 'Chief Data Officer', 'Data Steward', 'Data Manager', 'Dataops Engineer', 'Mlops Engineer', 'Non Renseigné']
 
@@ -72,7 +97,9 @@ models:
       - name: nom_entreprise
         description: "Nom d'entreprise extrait par Gemini depuis la description, ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
   - name: int_france_travail_ai_nom_secteur
     description: "{{ doc('int_france_travail_ai_nom_secteur') }}"
@@ -85,8 +112,12 @@ models:
       - name: nom_secteur
         description: "Secteur d'activité classifié par Gemini parmi les 15 secteurs définis"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
+              config:
+                severity: warn
               arguments:
                 values: ['Banque & Finance', 'Assurance', 'Télécommunications', 'Retail & E-Commerce', 'Industrie & Manufacturing', 'Santé & Pharmaceutique', 'Conseil & Esn', 'Média & Divertissement', 'Logistique & Transport', 'Énergie & Environnement', 'Immobilier & Construction', 'Éducation & Recherche', 'Administration Publique', 'Startup & Tech', 'Autre']
 
@@ -101,8 +132,12 @@ models:
       - name: type_contrat_ia
         description: "Type de contrat classifié par Gemini Flash : CDI, CDD, Stage, Alternance, Freelance, Intérim, ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
+              config:
+                severity: warn
               arguments:
                 values: ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Non Renseigné']
 
@@ -133,7 +168,9 @@ models:
       - name: niveau_experience_ia
         description: "Nombre d'années d'expérience exigées du candidat, extrait par Gemini Flash depuis la description, ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
   - name: int_france_travail_niveau_experience
     description: "{{ doc('int_france_travail_niveau_experience') }}"
@@ -162,8 +199,12 @@ models:
       - name: niveau_formation_ia
         description: "Niveau de formation minimum classifié par Gemini Flash : Bac+2, Bac+3, Bac+4, Bac+5, Doctorat, ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
+              config:
+                severity: warn
               arguments:
                 values: ['Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat', 'Non Renseigné']
 
@@ -346,7 +387,9 @@ models:
       - name: langues_ia
         description: "Langues exigées du candidat classifiées par Gemini Flash, séparées par une virgule (ex. 'Français, Anglais'), ou 'Non Renseigné'"
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
   - name: int_france_travail_offres_langues
     description: "{{ doc('int_france_travail_offres_langues') }}"
