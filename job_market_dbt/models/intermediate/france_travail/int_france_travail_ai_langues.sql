@@ -17,18 +17,13 @@
     )
 }}
 
-with offres as (
-    select id from {{ ref('int_france_travail_offres') }}
-),
-
-source as (
-    select offres.id, stg.description
-    from offres
-    left join {{ ref('stg_france_travail_offres') }} as stg on offres.id = stg.id
-
-    {% if is_incremental() %}
-    where offres.id not in (select id from {{ this }})
-    {% endif %}
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql). Un appel en erreur (réponse NULL)
+-- est retenté au run suivant ; sa ligne est alors remplacée (unique_key).
+with source as (
+    select id, description
+    from {{ ref('int_france_travail_ai_offres_a_traiter') }}
+    where a_traiter_langues
 )
 
 select

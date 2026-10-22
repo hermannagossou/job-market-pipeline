@@ -34,6 +34,15 @@ DBT_PROJECT_DIR = PROJECT_ROOT / "job_market_dbt"
 # Profil dbt versionné (keyfile/projet/dataset lus dans l'environnement) : pas de dépendance à ~/.dbt.
 DBT_PROFILES_DIR = PROJECT_ROOT / "include" / "dbt"
 
+# Jour collecté = la VEILLE de la date logique du run. Sous Airflow 3, "@daily" est un
+# CronTriggerTimetable : le run de minuit du jour J a data_interval_start = J (et non
+# J-1 comme sous Airflow 2). Collecter J à 00:00 ne renvoyait rien (run du 21/10/2026 :
+# aucune offre, chargement sauté) ou une demi-journée (run du 20/10 lancé à 07:00 :
+# 18 offres). La veille est, elle, une journée complète.
+JOUR_COLLECTE = timedelta(days=1)
+# Même jour, côté templates Jinja (nom du fichier GCS chargé dans BigQuery).
+JOUR_COLLECTE_DS = "{{ (data_interval_start - macros.timedelta(days=1)) | ds }}"
+
 
 @dag(
     dag_id="job_market_dag",
@@ -47,6 +56,8 @@ DBT_PROFILES_DIR = PROJECT_ROOT / "include" / "dbt"
     catchup=True,
     max_active_runs=1,  # backfill séquentiel : évite de saturer la machine locale (RAM/CPU)
     default_args={
+        # Relances utiles pour l'ingestion (API ou réseau momentanément indisponibles).
+        # dbt_build les désactive : voir plus bas.
         "retries": 2,
         "retry_delay": timedelta(minutes=5),
     },
@@ -58,11 +69,11 @@ def job_market_dag():
 
     @task(task_id="fetch_france_travail")
     def fetch_france_travail(data_interval_start=None):
-        return ft.fetch_jobs(data_interval_start)
+        return ft.fetch_jobs(data_interval_start - JOUR_COLLECTE)
 
     @task(task_id="upload_france_travail")
     def upload_france_travail(data, data_interval_start=None):
-        return ft.upload_to_gcs(GCS_BUCKET_NAME, data, data_interval_start)
+        return ft.upload_to_gcs(GCS_BUCKET_NAME, data, data_interval_start - JOUR_COLLECTE)
 
     # Un jour sans offre = pas de fichier uploadé : on saute alors le chargement.
     @task.short_circuit(task_id="has_file_france_travail", ignore_downstream_trigger_rules=False)
@@ -72,7 +83,7 @@ def job_market_dag():
     load_france_travail_to_bq = GCSToBigQueryOperator(
         task_id="load_france_travail_to_bq",
         bucket=GCS_BUCKET_NAME,
-        source_objects=["france-travail/offres_{{ data_interval_start | ds }}.json"],
+        source_objects=[f"france-travail/offres_{JOUR_COLLECTE_DS}.json"],
         destination_project_dataset_table=f"{GCP_PROJECT_ID}.{BIGQUERY_DATASET}.raw_france_travail_offres",
         source_format="NEWLINE_DELIMITED_JSON",
         write_disposition="WRITE_APPEND",
@@ -86,11 +97,11 @@ def job_market_dag():
 
     @task(task_id="fetch_wttj")
     def fetch_wttj(data_interval_start=None):
-        return wttj.fetch_jobs(data_interval_start)
+        return wttj.fetch_jobs(data_interval_start - JOUR_COLLECTE)
 
     @task(task_id="upload_wttj")
     def upload_wttj(data, data_interval_start=None):
-        return wttj.upload_to_gcs(GCS_BUCKET_NAME, data, data_interval_start)
+        return wttj.upload_to_gcs(GCS_BUCKET_NAME, data, data_interval_start - JOUR_COLLECTE)
 
     @task.short_circuit(task_id="has_file_wttj", ignore_downstream_trigger_rules=False)
     def has_file_wttj(gcs_uri):
@@ -99,7 +110,7 @@ def job_market_dag():
     load_wttj_to_bq = GCSToBigQueryOperator(
         task_id="load_wttj_to_bq",
         bucket=GCS_BUCKET_NAME,
-        source_objects=["welcome-to-the-jungle/offres_{{ data_interval_start | ds }}.json"],
+        source_objects=[f"welcome-to-the-jungle/offres_{JOUR_COLLECTE_DS}.json"],
         destination_project_dataset_table=f"{GCP_PROJECT_ID}.{BIGQUERY_DATASET}.raw_wttj_offres",
         source_format="NEWLINE_DELIMITED_JSON",
         write_disposition="WRITE_APPEND",
@@ -123,6 +134,12 @@ def job_market_dag():
         cwd=str(DBT_PROJECT_DIR),
         # Tourne dès qu'au moins une source a chargé (l'autre peut avoir été sautée).
         trigger_rule="none_failed_min_one_success",
+        # Pas de relance automatique : un test en échec échoue pareil 5 minutes plus
+        # tard, et chaque relance rejoue tout le dbt build, appels Gemini compris
+        # (runs du 18 au 20/10/2026 : 3 tentatives chacun, jusqu'à 3 h par tentative,
+        # ~650 000 appels refusés pour quota en une journée). Relancer à la main après
+        # correction (Clear sur la tâche).
+        retries=0,
     )
 
     # Les deux sources sont indépendantes : elles s'exécutent en parallèle,

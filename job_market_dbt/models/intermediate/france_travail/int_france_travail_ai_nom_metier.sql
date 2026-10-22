@@ -30,13 +30,13 @@
     ]
 -%}
 
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql). Un appel en erreur (réponse NULL)
+-- est retenté au run suivant ; sa ligne est alors remplacée (unique_key).
 with source as (
-    select * from {{ ref('int_france_travail_nom_metier') }}
-    where nom_metier is null
-
-    {% if is_incremental() %}
-    and id not in (select id from {{ this }})
-    {% endif %}
+    -- a_traiter_metier inclut la condition "la regex sur l'intitulé n'a rien trouvé".
+    select * from {{ ref('int_france_travail_ai_a_traiter') }}
+    where a_traiter_metier
 ),
 
 classification as (
@@ -81,6 +81,8 @@ classification as (
 select
     id,
     case
+        -- NULL (appel en erreur) conservé tel quel : l'offre sera retentée au run suivant.
+        when nom_metier_brut is null then null
         when lower(nom_metier_brut) in (
             {%- for metier in liste_noms_metier %}
             '{{ metier }}'{{ "," if not loop.last }}

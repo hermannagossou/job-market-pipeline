@@ -20,7 +20,8 @@
 --      l'absence d'hallucinations sans post-traitement applicatif.
 --   4. temperature à 0.1 (vs 0.2) + max_output_tokens à 200 (vs 256) :
 --      la tâche de matching est déterministe, on n'a pas besoin de variabilité.
---   5. Incrémental sur (id, competence) : seules les nouvelles offres sont envoyées au LLM.
+--   5. Incrémental sur (id, competence) : seules les offres de la file d'attente
+--      int_france_travail_ai_offres_a_traiter (pas encore traitées) sont envoyées au LLM.
 
 {{
     config(
@@ -30,31 +31,14 @@
     )
 }}
 
-with offres_validees as (
-    select id
-    from {{ ref('int_france_travail_offres') }}
-),
-
-stg_offres as (
+-- Offres à envoyer à Gemini : lues dans une file d'attente déjà filtrée, sans filtre
+-- incrémental ici (voir macros/ids_deja_traites.sql).
+with offres as (
     select id, nom_plateforme, description
-    from {{ ref('stg_france_travail_offres') }}
+    from {{ ref('int_france_travail_ai_offres_a_traiter') }}
+    where a_traiter_competences
 ),
 
-offres as (
-    select
-        o.id,
-        s.nom_plateforme,
-        s.description
-    from offres_validees as o
-    left join stg_offres as s on o.id = s.id
-
-    {% if is_incremental() %}
-    where o.id not in (select distinct id from {{ this }})
-    {% endif %}
-),
-
--- Une seule ligne : liste complète des compétences depuis le seed, ordre alphabétique.
--- La cross join ci-dessous copie cette liste dans chaque prompt sans rescanner la table.
 competences_seed as (
     select string_agg(skill_name, ', ' order by skill_name) as liste
     from {{ ref('competences') }}
@@ -98,31 +82,42 @@ reponses_llm as (
     )
 ),
 
--- Split CSV → une ligne par compétence, nettoyage des espaces.
+-- Split CSV -> une ligne par élément. Réponses NULL (appel en erreur) exclues : pas de
+-- ligne, l'offre sera retentée au run suivant. Ce filtre sur la sortie de Gemini est sans
+-- risque depuis la file d'attente : seules les offres à traiter atteignent Gemini.
+-- reponses_llm n'est lu qu'ici : BigQuery ne matérialise pas les CTE, une seconde lecture
+-- rappellerait Gemini.
 competences_splittees as (
     select distinct
         id,
-        trim(competence) as competence_llm,
-        nom_plateforme
+        nom_plateforme,
+        trim(competence) as competence_llm
     from reponses_llm
     left join unnest(split(competences_csv, ',')) as competence
-    where trim(competence) != 'Non Renseigné'
-        and trim(competence) != ''
+    where competences_csv is not null
 ),
 
--- Validation : inner join sur le seed — filtre dur contre les hallucinations résiduelles.
--- Le skill_name du seed fait autorité ; la casse LLM peut varier d'une lettre, le lower() corrige.
--- Cette correction de casse peut faire correspondre deux réponses LLM distinctes
--- (ex. "Data quality" et "Data Quality") au même skill_name : d'où le distinct final.
-competences_validees as (
-    select distinct
+-- Validation : seules les compétences du seed sont gardées (filtre dur contre les
+-- hallucinations résiduelles, 'Non Renseigné' et éléments vides compris).
+competences_par_offre as (
+    select
         cs.id,
-        c.skill_name as competence,
-        cs.nom_plateforme
+        cs.nom_plateforme,
+        array_agg(distinct c.skill_name ignore nulls) as competences
     from competences_splittees as cs
-    inner join {{ ref('competences') }} as c
+    left join {{ ref('competences') }} as c
         on lower(cs.competence_llm) = lower(c.skill_name)
+    group by cs.id, cs.nom_plateforme
 )
 
-select distinct id, competence, nom_plateforme
-from competences_validees
+-- Gemini a répondu sans compétence reconnue : une ligne 'Non Renseigné' marque l'offre
+-- comme traitée (sinon elle serait renvoyée à Gemini à chaque run). Filtrée dans
+-- int_offres_competences.
+select
+    id,
+    competence,
+    nom_plateforme
+from competences_par_offre,
+    unnest(
+        if(coalesce(array_length(competences), 0) = 0, ['Non Renseigné'], competences)
+    ) as competence

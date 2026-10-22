@@ -42,14 +42,14 @@
 
 with offres_a_enrichir as (
 
+    -- Seules les offres sans réponse exploitable (a_traiter) : un appel en erreur
+    -- (quota, délai) est retenté au run suivant, et sa ligne remplacée (unique_key).
+    -- Filtre calculé dans la file d'attente et non ici : un `id not in {{ this }}`
+    -- dans cette requête est appliqué APRÈS l'appel à Gemini (voir
+    -- macros/ids_deja_traites.sql).
     select *
     from {{ ref('int_wttj_ai_niveaux_a_traiter') }}
-    {% if is_incremental() %}
-    -- Seules les offres avec une réponse exploitable comptent comme traitées : un
-    -- appel en erreur (quota, délai) est retenté au run suivant, et sa ligne
-    -- remplacée (unique_key).
-    where id not in (select id from {{ this }} where reponse_ok)
-    {% endif %}
+    where a_traiter
 
 ),
 
