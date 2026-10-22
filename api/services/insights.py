@@ -29,6 +29,13 @@ _COMPARAISON_COLUMN = {
     "region": "loc.region",
 }
 
+# Tri des compétences pour /salaires-competences : les mieux payées (classement des
+# salaires) ou les plus demandées (nuage demande/salaire, échantillon représentatif).
+TriSalaireCompetence = Literal["salaire", "demande"]
+_TRI_SALAIRE_COMPETENCE = {
+    "salaire": "salaire_moyen DESC",
+    "demande": "nb_offres DESC, salaire_moyen DESC",
+}
 
 def get_tension_metiers(filters: FilterParams, limit: int = 15) -> list[TensionMetier]:
     """Nombre d'offres rapporté au nombre d'entreprises distinctes par métier.
@@ -145,9 +152,10 @@ def get_salaires_par_dimension(
     return [SalaireParDimension(**row) for row in rows]
 
 
-def get_salaires_competences(filters: FilterParams, limit: int = 20) -> list[SalaireCompetence]:
+def get_salaires_competences(
+    filters: FilterParams, limit: int = 20, tri: TriSalaireCompetence = "salaire"
+) -> list[SalaireCompetence]:
     """Salaire moyen/median des offres demandant chaque competence.
-
     Joint fact_offres au bridge competences. Utile cote candidat : quelles
     competences sont associees aux meilleures remunerations.
     """
@@ -168,7 +176,7 @@ def get_salaires_competences(filters: FilterParams, limit: int = 20) -> list[Sal
     {where_sql}
     GROUP BY comp.competence, comp.categorie
     HAVING nb_offres >= 3
-    ORDER BY salaire_moyen DESC
+    ORDER BY {_TRI_SALAIRE_COMPETENCE[tri]}
     LIMIT {int(limit)}
     """
     rows = run_query(sql, params)

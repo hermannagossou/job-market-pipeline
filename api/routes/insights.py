@@ -9,7 +9,7 @@ from api.schemas.insights import (
     TensionMetier,
 )
 from api.services import insights as insights_service
-from api.services.insights import DimensionComparaison, DimensionSalaire
+from api.services.insights import DimensionComparaison, DimensionSalaire, TriSalaireCompetence
 
 router = APIRouter(prefix="/api/insights", tags=["Insights"])
 
@@ -72,5 +72,8 @@ def read_salaires_dimension(
 def read_salaires_competences(
     filters: FilterParams = Depends(get_filters),
     limit: int = Query(20, ge=1, le=50),
+    tri: TriSalaireCompetence = Query(
+        "salaire", description="salaire : les mieux payées ; demande : les plus demandées"
+    ),
 ) -> list[SalaireCompetence]:
-    return insights_service.get_salaires_competences(filters, limit=limit)
+    return insights_service.get_salaires_competences(filters, limit=limit, tri=tri)

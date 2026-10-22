@@ -44,9 +44,16 @@ def donut(items: list[dict], title: str, label_key: str = "label", top_n: int | 
     df = pd.DataFrame(items)
     if top_n:
         df = df.nlargest(top_n, "nb_offres")
-    fig = px.pie(df, names=label_key, values="nb_offres", hole=0.55, title=title, color_discrete_sequence=COLOR_SEQUENCE)
+    fig = px.pie(df, names=label_key, values="nb_offres", hole=0.55, color_discrete_sequence=COLOR_SEQUENCE)
     fig.update_traces(textposition="inside", textinfo="percent")
-    st.plotly_chart(apply_plotly_theme(fig), width="stretch")
+    st.markdown(f"**{title}**")  # titre natif Streamlit : lisible en thème clair comme sombre
+    fig = apply_plotly_theme(fig)
+    fig.update_layout(
+        title_text="",
+        margin=dict(t=10, b=10),
+        legend=dict(orientation="h", yanchor="top", y=-0.05, x=0.5, xanchor="center"),
+    )
+    st.plotly_chart(fig, width="stretch")
 
 
 def evolution(points: list[dict], title: str, color: str = PRIMARY) -> None:
@@ -60,7 +67,10 @@ def evolution(points: list[dict], title: str, color: str = PRIMARY) -> None:
     fig.update_traces(line_color=color, fillcolor="rgba(37,99,235,0.12)")
     fig.update_xaxes(title=None)
     fig.update_yaxes(title="Offres")
-    st.plotly_chart(apply_plotly_theme(fig, height=360), width="stretch")
+    st.markdown(f"**{title}**")
+    fig = apply_plotly_theme(fig, height=360)
+    fig.update_layout(title_text="")
+    st.plotly_chart(fig, width="stretch")
 
 
 def salaire_range(items: list[dict], title: str) -> None:
@@ -210,3 +220,38 @@ def evolution_periode(points, title, color=PRIMARY):
     fig.update_xaxes(title=None)
     fig.update_yaxes(title="Offres")
     st.plotly_chart(apply_plotly_theme(fig, height=380), width="stretch")
+
+def competence_quadrant(items: list[dict], title: str) -> None:
+    """Nuage demande (x) vs salaire moyen (y) par compétence, comme l'ancien
+    dashboard : lignes pointillées aux médianes de l'échantillon (4 zones),
+    couleur par catégorie de compétence quand l'API la fournit."""
+    if not items:
+        _empty(title)
+        return
+    df = pd.DataFrame(items)
+    manquantes = {"competence", "nb_offres", "salaire_moyen"} - set(df.columns)
+    if manquantes:
+        st.error(f"Colonnes absentes pour « {title} » : {sorted(manquantes)} (reçu : {list(df.columns)}).")
+        return
+    df = df[df["salaire_moyen"].notna()].copy()
+    if len(df) < 4:
+        _empty(title)
+        return
+
+    categorie = next((c for c in ("categorie_competence", "categorie") if c in df.columns), None)
+    fig = px.scatter(
+        df, x="nb_offres", y="salaire_moyen", text="competence",
+        color=categorie,
+        color_discrete_sequence=COLOR_SEQUENCE,
+        labels={
+            "nb_offres": "Nombre d'offres (demande)",
+            "salaire_moyen": "Salaire moyen (€)",
+            **({categorie: "Catégorie"} if categorie else {}),
+        },
+    )
+    fig.update_traces(textposition="top center", marker=dict(size=10))
+    if not categorie:
+        fig.update_traces(marker_color=PRIMARY)
+    fig.add_hline(y=df["salaire_moyen"].median(), line_dash="dot", line_color="rgba(128,128,128,0.7)")
+    fig.add_vline(x=df["nb_offres"].median(), line_dash="dot", line_color="rgba(128,128,128,0.7)")
+    st.plotly_chart(apply_plotly_theme(fig, height=550), width="stretch")

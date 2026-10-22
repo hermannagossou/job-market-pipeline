@@ -72,7 +72,8 @@ with st.spinner("Chargement des départements…"):
         departements = []
 
 rendered_dep = choropleth(departements, kind="departements",
-                          title="Concentration des offres par département")
+                          title="Concentration des offres par département",
+                          fond_toutes_zones=not filters.get("region"))
 if not rendered_dep and departements:
     charts.bar(departements, "Offres par département", label_key="label",
                horizontal=True, top_n=20, color=PRIMARY)
