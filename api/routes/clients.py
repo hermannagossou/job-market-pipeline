@@ -60,11 +60,20 @@ def upload_cv(id_client: str, fichier: UploadFile = File(..., description="CV au
 @router.get(
     "/{id_client}/recommandations",
     response_model=list[OffreRecommandee],
-    summary="Offres recommandées pour un client, triées par pertinence",
+    summary="Offres récentes recommandées pour un client, par pertinence ou par date",
 )
 def read_recommandations(
     id_client: str,
     top_n: int = Query(10, ge=1, le=50, description="Nombre d'offres à retourner"),
+    tri: recommandations_service.TriRecommandations = Query(
+        "pertinence", description="pertinence : meilleur score d'abord ; recence : plus récentes d'abord"
+    ),
+    fenetre_jours: int = Query(
+        recommandations_service.FENETRE_JOURS_DEFAUT, ge=1, le=365,
+        description="Seules les offres publiées dans ce nombre de jours sont proposées",
+    ),
 ) -> list[OffreRecommandee]:
     _client_ou_404(id_client)
-    return recommandations_service.get_recommendations(id_client, top_n=top_n)
+    return recommandations_service.get_recommendations(
+        id_client, top_n=top_n, tri=tri, fenetre_jours=fenetre_jours
+    )

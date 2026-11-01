@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel
 
 
@@ -9,6 +11,7 @@ class OffreRecommandee(BaseModel):
     offre_salaire_min: float
     offre_salaire_max: float
     lien_offre: str | None = None
+    date_publication: date | None = None
     score_exact: float
     score_embedding: float
     score_final: float
