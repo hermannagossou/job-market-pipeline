@@ -11,6 +11,8 @@ Lit l'id_client depuis st.session_state (rempli par la vue "Mon profil" à la
 soumission) ; profil et recommandations viennent de l'API (api_client.py).
 """
 
+from datetime import date
+
 import streamlit as st
 
 import api_client
@@ -69,17 +71,30 @@ st.divider()
 # RECOMMANDATIONS
 # =============================================================================
 
+TRIS = {"pertinence": "Les plus pertinentes", "recence": "Les plus récentes"}
+tri = st.radio(
+    "Trier par",
+    options=list(TRIS),
+    format_func=TRIS.get,
+    horizontal=True,
+    key="tri_recommandations",
+)
+
 try:
     with st.spinner("Calcul de tes recommandations..."):
-        recommendations = api_client.get_recommendations(id_client)
+        recommendations = api_client.get_recommendations(id_client, tri=tri)
 except ApiError as e:
     st.error(f"Impossible de calculer tes recommandations pour l'instant ({e}).", icon=":material/error:")
     st.stop()
 
 if not recommendations:
-    st.info("Aucune offre ne correspond à ton profil pour le moment — reviens plus tard !")
+    st.info("Aucune offre publiée ces 30 derniers jours ne correspond à ton profil — reviens plus tard !")
 else:
-    st.caption(f"{len(recommendations)} offre(s) trouvée(s), triées par pertinence.")
+    ordre = "par pertinence" if tri == "pertinence" else "des plus récentes aux plus anciennes"
+    st.caption(
+        f"{len(recommendations)} offre(s) publiée(s) ces 30 derniers jours, triée(s) {ordre}. "
+        "Les offres plus anciennes, souvent déjà pourvues, ne sont pas proposées."
+    )
     for offre in recommendations:
         with st.container(border=True):
             col_a, col_b = st.columns([3, 1])
@@ -88,9 +103,15 @@ else:
                     f"**{offre['metier'] or 'Poste non renseigné'}** — "
                     f"{offre['entreprise'] or 'Entreprise non renseignée'}"
                 )
+                publiee = (
+                    f" · :material/calendar_today: publiée le "
+                    f"{date.fromisoformat(offre['date_publication']):%d/%m/%Y}"
+                    if offre.get("date_publication") else ""
+                )
                 st.caption(
                     f":material/location_on: {offre['ville'] or 'Ville non renseignée'} · "
                     f":material/euro: {offre['offre_salaire_min']:.0f}€ - {offre['offre_salaire_max']:.0f}€"
+                    f"{publiee}"
                 )
                 if offre.get("lien_offre"):
                     st.link_button("Voir l'offre", offre["lien_offre"], icon=":material/open_in_new:")

@@ -111,9 +111,14 @@ def get_client_profile(id_client: str) -> dict | None:
         raise
 
 
-def get_recommendations(id_client: str, top_n: int = 10) -> list[dict]:
+def get_recommendations(id_client: str, top_n: int = 10, tri: str = "pertinence") -> list[dict]:
+    """tri : "pertinence" (meilleur score d'abord) ou "recence" (plus récentes
+    d'abord). L'API ne renvoie que les offres publiées ces 30 derniers jours."""
     return _request(
-        "GET", f"/api/clients/{id_client}/recommandations", timeout=TIMEOUT_LONG, params={"top_n": top_n}
+        "GET",
+        f"/api/clients/{id_client}/recommandations",
+        timeout=TIMEOUT_LONG,
+        params={"top_n": top_n, "tri": tri},
     )
 
 

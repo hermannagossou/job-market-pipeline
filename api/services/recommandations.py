@@ -15,15 +15,41 @@ score_final = 0.625 × score_exact + 0.375 × score_embedding
 
 Dédoublonnage final par contenu (métier + entreprise + salaire) : un recruteur
 republie parfois la même annonce sous un nouvel id quelques jours plus tard.
+
+Fenêtre de fraîcheur : seules les offres publiées dans les `fenetre_jours`
+derniers jours sont proposées. Les sources ne signalent pas l'expiration d'une
+offre : sans cette fenêtre, des offres anciennes (probablement pourvues) très bien
+notées occupaient le haut du classement indéfiniment. La fenêtre est appliquée
+APRÈS le calcul des scores : la normalisation du score embedding porte toujours
+sur toutes les offres éligibles, comme dans bridge_offres_clients.sql, et une
+offre garde le même score quels que soient la fenêtre et le tri.
+
+Tri : "pertinence" (score, puis la plus récente à score égal) ou "recence" (la
+plus récente d'abord, puis le score).
 """
+from typing import Literal
+
 from google.cloud import bigquery
 
 from api.db.bigquery import run_query
 from api.schemas.recommandations import OffreRecommandee
 from api.services.base import table
 
+TriRecommandations = Literal["pertinence", "recence"]
+FENETRE_JOURS_DEFAUT = 30
 
-def get_recommendations(id_client: str, top_n: int = 10) -> list[OffreRecommandee]:
+_ORDRE = {
+    "pertinence": "score_final DESC, oe.date_publication DESC",
+    "recence": "oe.date_publication DESC, score_final DESC",
+}
+
+
+def get_recommendations(
+    id_client: str,
+    top_n: int = 10,
+    tri: TriRecommandations = "pertinence",
+    fenetre_jours: int = FENETRE_JOURS_DEFAUT,
+) -> list[OffreRecommandee]:
     sql = f"""
     WITH
     client_profile AS (
@@ -43,8 +69,9 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[OffreRecommande
         SELECT
             fo.id_offre, fo.id_metier, fo.id_entreprise, fo.id_localisation,
             fo.salaire_min AS offre_salaire_min, fo.salaire_max AS offre_salaire_max,
-            fo.lien_offre
+            fo.lien_offre, dd.date_publication
         FROM {table('fact_offres')} fo
+        JOIN {table('dim_dates')} dd ON dd.id_date = fo.id_date
         JOIN {table('dim_formations')} df ON df.id_formation = fo.id_formation
         JOIN {table('dim_experiences')} de ON de.id_experience = fo.id_experience
         CROSS JOIN client_profile cp
@@ -119,6 +146,7 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[OffreRecommande
         oe.offre_salaire_min,
         oe.offre_salaire_max,
         oe.lien_offre,
+        oe.date_publication,
         COALESCE(sec.score_exact, 0) AS score_exact,
         COALESCE(sem.score_embedding, 0) AS score_embedding,
         ROUND(
@@ -131,15 +159,20 @@ def get_recommendations(id_client: str, top_n: int = 10) -> list[OffreRecommande
     LEFT JOIN {table('dim_metiers')} dm ON dm.id_metier = oe.id_metier
     LEFT JOIN {table('dim_entreprises')} dent ON dent.id_entreprise = oe.id_entreprise
     LEFT JOIN {table('dim_localisations')} dl ON dl.id_localisation = oe.id_localisation
+    -- Fenêtre de fraîcheur, après le calcul des scores (voir docstring).
+    WHERE oe.date_publication >= DATE_SUB(CURRENT_DATE(), INTERVAL @fenetre_jours DAY)
     -- Salaires en FLOAT64 : BigQuery refuse de partitionner dessus, d'où le CAST
     -- (sans perte, les salaires sont toujours entiers).
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY oe.id_metier, oe.id_entreprise,
             CAST(oe.offre_salaire_min AS INT64), CAST(oe.offre_salaire_max AS INT64)
-        ORDER BY score_final DESC
+        ORDER BY score_final DESC, oe.date_publication DESC
     ) = 1
-    ORDER BY score_final DESC
+    ORDER BY {_ORDRE[tri]}
     LIMIT {int(top_n)}
     """
-    rows = run_query(sql, [bigquery.ScalarQueryParameter("id_client", "STRING", id_client)])
+    rows = run_query(sql, [
+        bigquery.ScalarQueryParameter("id_client", "STRING", id_client),
+        bigquery.ScalarQueryParameter("fenetre_jours", "INT64", int(fenetre_jours)),
+    ])
     return [OffreRecommandee(**row) for row in rows]

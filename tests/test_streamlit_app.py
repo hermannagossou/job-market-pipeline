@@ -53,10 +53,9 @@ def api(monkeypatch):
 
     monkeypatch.setattr(api_client, "upsert_client", upsert)
     monkeypatch.setattr(api_client, "get_client_profile", lambda id_client: PROFIL)
-    monkeypatch.setattr(
-        api_client,
-        "get_recommendations",
-        lambda id_client, top_n=10: [
+    def recommandations(id_client, top_n=10, tri="pertinence"):
+        appels.append(("recommandations", tri))
+        return [
             {
                 "id_offre": "o1",
                 "metier": "Data Engineer",
@@ -68,9 +67,11 @@ def api(monkeypatch):
                 "score_exact": 0.5,
                 "score_embedding": 1.0,
                 "score_final": 0.688,
+                "date_publication": "2026-10-30",
             }
-        ],
-    )
+        ]
+
+    monkeypatch.setattr(api_client, "get_recommendations", recommandations)
     return appels
 
 
@@ -137,6 +138,16 @@ def test_recommandations_affiche_les_offres(api):
     at = _recommandations("id-123")
     assert not at.exception
     assert at.metric[0].value == "69%"
+    assert any("30/10/2026" in c.value for c in at.caption)
+    assert ("recommandations", "pertinence") in api
+
+
+def test_recommandations_tri_par_date(api):
+    at = _recommandations("id-123")
+    at.radio(key="tri_recommandations").set_value("recence").run()
+    assert not at.exception
+    assert api[-1] == ("recommandations", "recence")
+    assert any("plus récentes" in c.value for c in at.caption)
 
 
 def test_recherche_email_api_indisponible(api, monkeypatch):

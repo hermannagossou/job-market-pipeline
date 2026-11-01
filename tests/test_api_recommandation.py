@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from api.main import app
 from api.services import clients as clients_service
 from api.services import cv as cv_service
+from api.services import recommandations as recommandations_service
 from api.services import referentiels as referentiels_service
 
 REFERENTIELS = {
@@ -154,3 +155,27 @@ def test_resolve_experience_seuils(client, annees, label):
 def test_resolve_experience_valeur_absente(client):
     assert cv_service.resolve_experience(None) is None
     assert cv_service.resolve_experience("beaucoup") is None
+
+
+@pytest.mark.parametrize("params", [{"tri": "nimporte"}, {"fenetre_jours": 0}, {"fenetre_jours": 400}])
+def test_recommandations_parametres_invalides(client, params):
+    assert client.get("/api/clients/x/recommandations", params=params).status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("tri", "ordre"),
+    [("pertinence", "ORDER BY score_final DESC, oe.date_publication DESC\n"),
+     ("recence", "ORDER BY oe.date_publication DESC, score_final DESC\n")],
+)
+def test_recommandations_tri_et_fenetre_transmis(monkeypatch, tri, ordre):
+    envoyees = []
+    monkeypatch.setattr(
+        recommandations_service, "run_query", lambda sql, params=None: envoyees.append((sql, params)) or []
+    )
+    assert recommandations_service.get_recommendations("id-1", tri=tri, fenetre_jours=15) == []
+    sql, params = envoyees[0]
+    assert ordre in sql
+    # Fenêtre appliquée après le calcul des scores (dans la requête finale, pas
+    # dans offres_eligibles) : les scores restent ceux de bridge_offres_clients.
+    assert sql.index("INTERVAL @fenetre_jours DAY") > sql.index("score_embedding_calc AS")
+    assert {p.name: p.value for p in params} == {"id_client": "id-1", "fenetre_jours": 15}

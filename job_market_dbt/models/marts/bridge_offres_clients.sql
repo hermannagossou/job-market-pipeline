@@ -32,6 +32,11 @@
 --
 -- score_final = 0.625 × score_exact + 0.375 × score_embedding
 --
+-- Fenêtre de fraîcheur (offres publiées ces 30 derniers jours) et tri par date :
+-- appliqués à la LECTURE par l'API (api/services/recommandations.py), pas ici.
+-- Cette table garde les scores de toutes les paires éligibles ; l'API filtre après
+-- le calcul des scores, si bien que les deux restent alignées score pour score.
+--
 -- dim_clients et les 3 bridges côté client sont créées manuellement dans
 -- BigQuery (alimentées par l'app Streamlit, pas par dbt) -> déclarées comme
 -- sources (voir _sources_streamlit.yml), jamais via ref().
