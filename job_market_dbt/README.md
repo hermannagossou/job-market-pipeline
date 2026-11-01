@@ -1,12 +1,11 @@
-# 🥪 The Jaffle Shop 🦘
+# Projet dbt `job_market_dbt`
 
-_powered by the dbt Fusion engine_
+Transformation des offres d'emploi brutes (France Travail, Welcome to the Jungle) en modèle en étoile dans BigQuery, avec enrichissement par Gemini et embeddings pour la recommandation.
 
-Welcome! This is a sandbox project for exploring the basic functionality of Fusion. It's based on a fictional restaurant called the Jaffle Shop that serves [jaffles](https://en.wikipedia.org/wiki/Pie_iron).
+La documentation du pipeline (couches, enrichissement IA, recommandation, règles d'exploitation) est dans le [README principal](../README.md#le-pipeline).
 
-To get started:
-1. Set up your database connection in `~/.dbt/profiles.yml`. If you got here by running `dbt init`, you should already be good to go.
-2. Run `dbt build`. That's it!
+```bash
+dbt build --profiles-dir ../include/dbt   # profil : GCP_PROJECT_ID et BIGQUERY_DATASET dans l'environnement
+```
 
-> [!NOTE]
-> If you're brand-new to dbt, we recommend starting with the [dbt Learn](https://learn.getdbt.com/) platform. It's a free, interactive way to learn dbt, and it's a great way to get started if you're new to the tool.
+Le détail de chaque modèle est documenté dans les fichiers `docs.md` et `_*.yml` de `models/`.
