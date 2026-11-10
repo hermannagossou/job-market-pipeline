@@ -4,11 +4,25 @@
 -- Toutes les dimensions sont reliées via leurs surrogate keys respectives.
 -- id_localisation utilise la MÊME normalisation de ville que dim_localisations.sql
 -- (via le macro normalize_ville) — indispensable pour que les clés correspondent.
+--
+-- Offres retirées en amont : l'incrémental n'insère que les nouvelles offres, alors
+-- que les dimensions sont recalculées à chaque run. Quand WTTJ republie une offre
+-- avec un intitulé qui ne contient plus de métier data, elle sort de
+-- int_offres_doublons mais restait ici avec ses anciennes clés ; si c'était la seule
+-- offre de l'entreprise, id_entreprise devenait orphelin (run du 10/11/2026 en
+-- échec). Le post_hook supprime ces offres pour garder la table alignée sur l'amont.
 
 {{
     config(
         materialized='incremental',
-        unique_key='id_offre'
+        unique_key='id_offre',
+        post_hook="
+            delete from {{ this }}
+            where id_offre not in (
+                select {{ dbt_utils.generate_surrogate_key(['id', 'nom_plateforme']) }}
+                from {{ ref('int_offres_doublons') }}
+            )
+        "
     )
 }}
 
